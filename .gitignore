@@ -1,0 +1,30 @@
+# Godot 4 ---------------------------------------------------------------------
+# Import cache, class-name cache and editor state. Regenerate with:
+#   godot --headless --path . --import
+.godot/
+
+# Exported builds
+/build/
+/export/
+*.translation
+
+# export_presets.cfg can hold signing keystore paths and passwords.
+export_presets.cfg
+
+# Godot's per-user editor layout, if it ever lands in-tree
+*.import.bak
+
+# Tooling ---------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+
+# Local screenshots from tools/screenshot.gd
+/screenshots/
+*.local.png
+
+# OS --------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*~

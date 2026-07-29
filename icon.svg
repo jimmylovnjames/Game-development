@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#120a1e"/>
+      <stop offset="1" stop-color="#2b1030"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="18" fill="url(#sky)"/>
+  <!-- skyline slabs -->
+  <g fill="#07060d" stroke="#00e5ff" stroke-width="2">
+    <rect x="14" y="58" width="20" height="52"/>
+    <rect x="40" y="38" width="18" height="72"/>
+    <rect x="64" y="50" width="22" height="60"/>
+    <rect x="92" y="30" width="20" height="80"/>
+  </g>
+  <!-- neon sign -->
+  <rect x="44" y="46" width="10" height="3" fill="#ff2d95"/>
+  <rect x="68" y="60" width="14" height="3" fill="#ff2d95"/>
+  <rect x="96" y="40" width="12" height="3" fill="#f7ff3c"/>
+  <!-- moon -->
+  <circle cx="98" cy="18" r="9" fill="#ff2d95" opacity="0.85"/>
+  <!-- rust ground -->
+  <rect x="0" y="108" width="128" height="20" fill="#3a221a"/>
+  <rect x="0" y="108" width="128" height="2" fill="#00e5ff" opacity="0.7"/>
+</svg>

@@ -1,0 +1,18 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/neon_sign.gdshader" id="1_neon"]
+
+[resource]
+resource_name = "neon_magenta"
+render_priority = 0
+shader = ExtResource("1_neon")
+shader_parameter/neon_color = Color(1.0, 0.176, 0.584, 1)
+shader_parameter/energy = 2.8
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/flicker_speed = 11.0
+shader_parameter/flicker_amount = 0.12
+shader_parameter/phase_offset = 0.0
+shader_parameter/dropout_rate = 0.7
+shader_parameter/dropout_chance = 0.04
+shader_parameter/dropout_floor = 0.06
+shader_parameter/tube_color = Color(0.1, 0.04, 0.07, 1)

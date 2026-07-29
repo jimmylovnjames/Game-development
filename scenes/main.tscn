@@ -1,0 +1,121 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/game_root.gd" id="1_root"]
+[ext_resource type="Script" path="res://scripts/world/district_blockout.gd" id="2_blockout"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3_player"]
+[ext_resource type="Material" path="res://assets/materials/toon_asphalt.tres" id="4_asphalt"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_noir"]
+sky_top_color = Color(0.043, 0.031, 0.094, 1)
+sky_horizon_color = Color(0.31, 0.067, 0.235, 1)
+sky_curve = 0.18
+sky_energy_multiplier = 0.4
+ground_bottom_color = Color(0.024, 0.02, 0.035, 1)
+ground_horizon_color = Color(0.18, 0.055, 0.14, 1)
+ground_curve = 0.04
+ground_energy_multiplier = 0.3
+sun_angle_max = 24.0
+sun_curve = 0.08
+
+[sub_resource type="Sky" id="Sky_noir"]
+sky_material = SubResource("ProceduralSkyMaterial_noir")
+
+[sub_resource type="Environment" id="Environment_noir"]
+background_mode = 2
+sky = SubResource("Sky_noir")
+ambient_light_source = 2
+ambient_light_color = Color(0.192, 0.153, 0.337, 1)
+ambient_light_sky_contribution = 0.35
+ambient_light_energy = 1.1
+tonemap_mode = 3
+tonemap_exposure = 1.0
+tonemap_white = 3.0
+ssao_enabled = true
+ssao_radius = 1.4
+ssao_intensity = 1.6
+ssil_enabled = false
+glow_enabled = true
+glow_normalized = true
+glow_intensity = 0.95
+glow_strength = 1.0
+glow_bloom = 0.12
+glow_blend_mode = 1
+glow_hdr_threshold = 1.05
+glow_hdr_scale = 2.0
+fog_enabled = true
+fog_mode = 0
+fog_light_color = Color(0.235, 0.129, 0.325, 1)
+fog_light_energy = 0.5
+fog_sun_scatter = 0.12
+fog_density = 0.0022
+fog_aerial_perspective = 0.25
+fog_sky_affect = 0.3
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.006
+volumetric_fog_albedo = Color(0.5, 0.42, 0.62, 1)
+volumetric_fog_emission = Color(0.075, 0.02, 0.11, 1)
+volumetric_fog_emission_energy = 0.3
+volumetric_fog_anisotropy = 0.25
+volumetric_fog_length = 160.0
+volumetric_fog_ambient_inject = 0.2
+adjustment_enabled = true
+adjustment_brightness = 1.0
+adjustment_contrast = 1.12
+adjustment_saturation = 1.18
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(500, 500)
+subdivide_width = 8
+subdivide_depth = 8
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_ground"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_root")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_noir")
+
+[node name="Moonlight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.766044, 0, -0.642788, -0.492404, 0.642788, 0.586824, 0.413176, 0.766044, -0.492404, 0, 30, 0)
+light_color = Color(0.541, 0.612, 1, 1)
+light_energy = 0.5
+light_specular = 0.25
+light_angular_distance = 0.6
+shadow_enabled = true
+shadow_bias = 0.04
+shadow_normal_bias = 1.5
+directional_shadow_mode = 2
+directional_shadow_max_distance = 140.0
+
+[node name="World" type="Node3D" parent="."]
+
+[node name="Ground" type="StaticBody3D" parent="World"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="World/Ground"]
+shape = SubResource("WorldBoundaryShape3D_ground")
+
+[node name="Mesh" type="MeshInstance3D" parent="World/Ground"]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = ExtResource("4_asphalt")
+
+[node name="Blockout" type="Node3D" parent="World"]
+script = ExtResource("2_blockout")
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+
+[node name="DebugHUD" type="CanvasLayer" parent="."]
+
+[node name="DebugLabel" type="Label" parent="DebugHUD"]
+offset_left = 18.0
+offset_top = 14.0
+offset_right = 560.0
+offset_bottom = 320.0
+theme_override_colors/font_color = Color(0, 0.898, 1, 1)
+theme_override_colors/font_outline_color = Color(0.02, 0.01, 0.04, 1)
+theme_override_constants/outline_size = 5
+theme_override_constants/line_spacing = 2
+text = "NeonWastesRPG"

@@ -1,0 +1,18 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/neon_sign.gdshader" id="1_neon"]
+
+[resource]
+resource_name = "neon_cyan"
+render_priority = 0
+shader = ExtResource("1_neon")
+shader_parameter/neon_color = Color(0.0, 0.898, 1.0, 1)
+shader_parameter/energy = 2.6
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/flicker_speed = 7.0
+shader_parameter/flicker_amount = 0.08
+shader_parameter/phase_offset = 3.7
+shader_parameter/dropout_rate = 0.5
+shader_parameter/dropout_chance = 0.02
+shader_parameter/dropout_floor = 0.05
+shader_parameter/tube_color = Color(0.04, 0.08, 0.1, 1)

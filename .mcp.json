@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "godot-cli": {
+      "type": "stdio",
+      "command": "godot-mcp",
+      "args": [],
+      "env": {
+        "GODOT_PATH": "/usr/local/bin/godot"
+      }
+    },
+    "godot-editor": {
+      "type": "stdio",
+      "command": "godot-mcp-server",
+      "args": [],
+      "env": {}
+    },
+    "godot-ai": {
+      "type": "http",
+      "url": "http://127.0.0.1:8000/mcp"
+    }
+  }
+}

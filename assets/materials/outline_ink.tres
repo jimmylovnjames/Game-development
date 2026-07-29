@@ -1,0 +1,14 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/outline_hull.gdshader" id="1_outline"]
+
+[resource]
+resource_name = "outline_ink"
+render_priority = 0
+shader = ExtResource("1_outline")
+shader_parameter/outline_color = Color(0.03, 0.02, 0.06, 1)
+shader_parameter/outline_width = 0.004
+shader_parameter/constant_screen_width = true
+shader_parameter/max_scale_distance = 140.0
+shader_parameter/fade_start = 90.0
+shader_parameter/fade_end = 180.0

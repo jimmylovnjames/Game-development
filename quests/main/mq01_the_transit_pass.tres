@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="Quest" format=3]
+
+[ext_resource type="Script" path="res://scripts/quests/quest_objective.gd" id="1_vjc73"]
+[ext_resource type="Script" path="res://scripts/quests/quest.gd" id="2_hlbwa"]
+
+[sub_resource type="Resource" id="Resource_g1jnn"]
+script = ExtResource("1_vjc73")
+id = &"talk_to_vex"
+description = "Let Vex finish. She is building up to the part that costs you."
+kind = 3
+target_id = &"npc_vex"
+
+[sub_resource type="Resource" id="Resource_myhx6"]
+script = ExtResource("1_vjc73")
+id = &"reach_spine_gate"
+description = "Take the pass to the spine gate before the rain stops."
+target_id = &"trigger_spine_gate"
+marker_position = Vector3(96, 0, -42)
+has_marker = true
+
+[sub_resource type="Resource" id="Resource_grail"]
+script = ExtResource("1_vjc73")
+id = &"read_the_pass"
+description = "Find someone who can read the pass without reporting it."
+kind = 6
+target_id = &"setpiece_pass_forger"
+optional = true
+
+[resource]
+script = ExtResource("2_hlbwa")
+id = &"mq01_the_transit_pass"
+title = "The Transit Pass"
+logline = "Someone paid off your debt. Nobody does that for free."
+briefing = "Vex says the debt is cleared and hands you a sealed transit pass
+for the Ferrum Halo spine line. She will not say who bought it. The pass expires
+at dawn, and the only people who can tell you whose name is on it are the ones
+who will want it back."
+act = 1
+giver_id = &"npc_vex"
+district_id = &"district_lowspine"
+objectives = Array[ExtResource("1_vjc73")]([SubResource("Resource_g1jnn"), SubResource("Resource_myhx6"), SubResource("Resource_grail")])
+flags_on_complete = Array[StringName]([&"mq01_resolved"])
+outcomes = Array[StringName]([&"boarded_with_the_pass", &"sold_the_pass_to_the_syndicate", &"burned_the_pass"])
+outcome_notes = "boarded_with_the_pass — you owe the buyer, and they will collect in Act 2.
+sold_the_pass_to_the_syndicate — solvent, stranded, and the Lowspine remembers.
+burned_the_pass — nobody owns you; nobody helps you either. Locks the spine line."
