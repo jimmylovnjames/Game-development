@@ -1,0 +1,22 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/hologram.gdshader" id="1_holo"]
+
+[resource]
+resource_name = "hologram_cyan"
+render_priority = 0
+shader = ExtResource("1_holo")
+shader_parameter/holo_color = Color(0.0, 0.898, 1.0, 1)
+shader_parameter/energy = 2.2
+shader_parameter/phase_offset = 37.0
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/scanline_density = 34.0
+shader_parameter/scanline_speed = -0.4
+shader_parameter/scanline_sharpness = 0.3
+shader_parameter/flicker_amount = 0.14
+shader_parameter/flicker_speed = 7.0
+shader_parameter/glitch_rate = 2.8
+shader_parameter/glitch_chance = 0.18
+shader_parameter/glitch_strength = 0.06
+shader_parameter/edge_boost = 1.1
+shader_parameter/fresnel_power = 2.4

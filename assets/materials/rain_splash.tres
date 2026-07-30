@@ -1,0 +1,11 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/rain_splash.gdshader" id="1_splash"]
+
+[resource]
+resource_name = "rain_splash"
+render_priority = 0
+shader = ExtResource("1_splash")
+shader_parameter/splash_color = Color(0.5, 0.62, 0.8, 0.4)
+shader_parameter/ring_radius = 0.68
+shader_parameter/ring_width = 0.18

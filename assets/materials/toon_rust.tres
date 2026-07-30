@@ -1,0 +1,45 @@
+[gd_resource type="ShaderMaterial" load_steps=6 format=3]
+
+[ext_resource type="Shader" path="res://shaders/toon_cel.gdshader" id="1_toon"]
+[ext_resource type="Material" path="res://assets/materials/outline_ink.tres" id="2_ink"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_grime"]
+noise_type = 5
+frequency = 0.12
+fractal_octaves = 5
+fractal_lacunarity = 2.4
+fractal_gain = 0.65
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_grime"]
+width = 256
+height = 256
+seamless = true
+noise = SubResource("FastNoiseLite_grime")
+
+[resource]
+resource_name = "toon_rust"
+render_priority = 0
+next_pass = ExtResource("2_ink")
+shader = ExtResource("1_toon")
+shader_parameter/albedo_color = Color(0.32, 0.2, 0.13, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/roughness = 0.85
+shader_parameter/metallic = 0.25
+shader_parameter/light_bands = 3.0
+shader_parameter/band_softness = 0.035
+shader_parameter/shadow_wrap = 0.32
+shader_parameter/shadow_tint = Color(0.2, 0.13, 0.36, 1)
+shader_parameter/shadow_tint_strength = 0.55
+shader_parameter/spec_threshold = 0.6
+shader_parameter/spec_softness = 0.06
+shader_parameter/spec_strength = 0.5
+shader_parameter/rim_color = Color(1.0, 0.42, 0.2, 1)
+shader_parameter/rim_power = 4.5
+shader_parameter/rim_strength = 0.5
+shader_parameter/rim_light_bias = 0.6
+shader_parameter/emission_color = Color(0, 0, 0, 1)
+shader_parameter/emission_energy = 0.0
+shader_parameter/grime_texture = SubResource("NoiseTexture2D_grime")
+shader_parameter/grime_color = Color(0.14, 0.06, 0.03, 1)
+shader_parameter/grime_strength = 0.55
+shader_parameter/grime_up_bias = 0.35

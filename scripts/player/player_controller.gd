@@ -18,10 +18,30 @@ signal landed(fall_speed: float)
 @export var ground_acceleration: float = 12.0
 @export var air_acceleration: float = 3.0
 @export var jump_velocity: float = 5.0
+## Gravity multiplier on the way down. Falling slightly faster than rising is
+## the single cheapest way to stop a jump feeling floaty.
+@export var fall_gravity_multiplier: float = 1.55
+## Releasing jump early scales velocity by this — a tap hops, a hold soars.
+@export var jump_cut_multiplier: float = 0.45
+@export var max_fall_speed: float = 26.0
 ## Grace period after walking off a ledge during which a jump still registers.
 @export var coyote_time: float = 0.12
 ## A jump pressed this long before landing is queued rather than dropped.
 @export var jump_buffer_time: float = 0.15
+
+@export_group("Slopes")
+## Snap distance that keeps the body glued over kerbs and rubble lips.
+@export var snap_length: float = 0.35
+## Steepest walkable slope in degrees.
+@export var max_slope_deg: float = 50.0
+## Above this angle the ground starts sliding the body downhill.
+@export var slide_start_deg: float = 38.0
+@export var slide_acceleration: float = 14.0
+
+@export_group("Props")
+## Force (N) applied to rigid bodies the body walks into. Crates shove, cans
+## skitter — the mass ratio falls out of impulse/mass for free.
+@export var push_force: float = 55.0
 
 @export_group("Camera")
 @export var mouse_sensitivity: float = 0.0025
@@ -55,6 +75,8 @@ func _ready() -> void:
 	_gravity = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
 	_interact_ray.target_position = Vector3(0.0, 0.0, -interact_range)
 	_spring_arm.spring_length = camera_distance
+	floor_snap_length = snap_length
+	floor_max_angle = deg_to_rad(max_slope_deg)
 	_yaw = rotation.y
 	_capture_mouse(true)
 
@@ -93,10 +115,13 @@ func _physics_process(delta: float) -> void:
 	_update_crouch()
 	_apply_gravity(delta)
 	_apply_jump()
+	_apply_jump_cut()
 	_apply_movement(delta)
+	_apply_slope_slide(delta)
 
 	move_and_slide()
 
+	_push_rigid_bodies(delta)
 	_detect_landing()
 	_update_interactable()
 
@@ -140,7 +165,10 @@ func _apply_gravity(delta: float) -> void:
 		_time_since_grounded = 0.0
 	else:
 		_time_since_grounded += delta
-		velocity.y -= _gravity * delta
+		var gravity := _gravity
+		if velocity.y < 0.0:
+			gravity *= fall_gravity_multiplier
+		velocity.y = maxf(velocity.y - gravity * delta, -max_fall_speed)
 
 
 func _apply_jump() -> void:
@@ -150,6 +178,13 @@ func _apply_jump() -> void:
 		velocity.y = jump_velocity
 		_time_since_jump_pressed = INF
 		_time_since_grounded = INF
+
+
+## Early release shortens the arc. Polled like the jump itself so replays and
+## AI drivers get the same trajectory a human would.
+func _apply_jump_cut() -> void:
+	if Input.is_action_just_released("jump") and velocity.y > jump_velocity * jump_cut_multiplier:
+		velocity.y *= jump_cut_multiplier
 
 
 func _apply_movement(delta: float) -> void:
@@ -174,6 +209,43 @@ func _apply_movement(delta: float) -> void:
 	if direction.length_squared() > 0.01:
 		var desired_yaw := atan2(direction.x, direction.z)
 		rotation.y = lerp_angle(rotation.y, desired_yaw, 12.0 * delta)
+
+
+## Steep ground shoves the body downhill along the slope tangent. The effect
+## ramps in gently so ordinary rooftops and kerbs stay walkable.
+func _apply_slope_slide(delta: float) -> void:
+	if not is_on_floor():
+		return
+	var normal := get_floor_normal()
+	if normal.y <= 0.0:
+		return
+	var angle := rad_to_deg(acos(clampf(normal.y, -1.0, 1.0)))
+	if angle <= slide_start_deg:
+		return
+	var steepness := inverse_lerp(slide_start_deg, max_slope_deg, angle)
+	# Downhill is the floor normal with its up-component removed.
+	var downhill := (Vector3(normal.x, 0.0, normal.z)).normalized()
+	velocity += downhill * slide_acceleration * steepness * delta
+
+
+## Walk into a rigid body and it goes. Impulse is force x delta so the result
+## is a shove sustained over the contact, not a one-frame punch.
+func _push_rigid_bodies(delta: float) -> void:
+	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
+	if horizontal_speed < 0.3:
+		return
+	for i in get_slide_collision_count():
+		var collision := get_slide_collision(i)
+		var body := collision.get_collider() as RigidBody3D
+		if body == null:
+			continue
+		var normal := collision.get_normal()
+		if absf(normal.y) > 0.6:
+			continue  # standing on it or hanging under it; leave it alone
+		var impulse := -normal * push_force * delta * clampf(
+			horizontal_speed / sprint_speed, 0.4, 1.0
+		)
+		body.apply_impulse(impulse, collision.get_position() - body.global_position)
 
 
 func _detect_landing() -> void:

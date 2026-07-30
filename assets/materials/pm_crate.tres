@@ -1,0 +1,6 @@
+[gd_resource type="PhysicsMaterial" format=3]
+
+[resource]
+resource_name = "pm_crate"
+friction = 1.05
+bounce = 0.12

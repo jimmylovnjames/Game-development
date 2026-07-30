@@ -1,0 +1,29 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://shaders/toon_cel.gdshader" id="1_toon"]
+[ext_resource type="Material" path="res://assets/materials/outline_ink.tres" id="2_ink"]
+
+[resource]
+resource_name = "toon_metal_dark"
+render_priority = 0
+next_pass = ExtResource("2_ink")
+shader = ExtResource("1_toon")
+shader_parameter/albedo_color = Color(0.13, 0.14, 0.18, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/roughness = 0.42
+shader_parameter/metallic = 0.65
+shader_parameter/light_bands = 3.0
+shader_parameter/band_softness = 0.03
+shader_parameter/shadow_wrap = 0.3
+shader_parameter/shadow_tint = Color(0.18, 0.14, 0.38, 1)
+shader_parameter/shadow_tint_strength = 0.5
+shader_parameter/spec_threshold = 0.45
+shader_parameter/spec_softness = 0.05
+shader_parameter/spec_strength = 1.4
+shader_parameter/rim_color = Color(0.0, 0.85, 1.0, 1)
+shader_parameter/rim_power = 4.0
+shader_parameter/rim_strength = 0.8
+shader_parameter/rim_light_bias = 0.55
+shader_parameter/emission_color = Color(0, 0, 0, 1)
+shader_parameter/emission_energy = 0.0
+shader_parameter/grime_strength = 0.0
