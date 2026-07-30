@@ -39,9 +39,11 @@ signal landed(fall_speed: float)
 @export var slide_acceleration: float = 14.0
 
 @export_group("Props")
-## Force (N) applied to rigid bodies the body walks into. Crates shove, cans
-## skitter — the mass ratio falls out of impulse/mass for free.
-@export var push_force: float = 55.0
+## The body tries to drag shoved props toward this fraction of its own speed.
+@export var push_speed_cap: float = 3.0
+## Force ceiling (N) on the shove: cans reach the target in a frame or two and
+## skitter off, crates grind against friction and never get there.
+@export var push_max_force: float = 400.0
 
 @export_group("Camera")
 @export var mouse_sensitivity: float = 0.0025
@@ -119,9 +121,13 @@ func _physics_process(delta: float) -> void:
 	_apply_movement(delta)
 	_apply_slope_slide(delta)
 
+	# Intent speed must be sampled before move_and_slide(): once the body is
+	# blocked the slide projection zeroes velocity, and a push measured after
+	# that would never fire.
+	var intent_speed := Vector2(velocity.x, velocity.z).length()
 	move_and_slide()
 
-	_push_rigid_bodies(delta)
+	_push_rigid_bodies(delta, intent_speed)
 	_detect_landing()
 	_update_interactable()
 
@@ -228,12 +234,14 @@ func _apply_slope_slide(delta: float) -> void:
 	velocity += downhill * slide_acceleration * steepness * delta
 
 
-## Walk into a rigid body and it goes. Impulse is force x delta so the result
-## is a shove sustained over the contact, not a one-frame punch.
-func _push_rigid_bodies(delta: float) -> void:
-	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
-	if horizontal_speed < 0.3:
+## Walk into a rigid body and it goes. Each frame the shove closes part of the
+## gap between the prop's speed and a fraction of the player's intent speed,
+## capped by push_max_force — so a can jumps away in one contact while a crate
+## accelerates slowly against ground friction.
+func _push_rigid_bodies(delta: float, intent_speed: float) -> void:
+	if intent_speed < 0.3:
 		return
+	var desired := minf(intent_speed * 0.8, push_speed_cap)
 	for i in get_slide_collision_count():
 		var collision := get_slide_collision(i)
 		var body := collision.get_collider() as RigidBody3D
@@ -242,10 +250,15 @@ func _push_rigid_bodies(delta: float) -> void:
 		var normal := collision.get_normal()
 		if absf(normal.y) > 0.6:
 			continue  # standing on it or hanging under it; leave it alone
-		var impulse := -normal * push_force * delta * clampf(
-			horizontal_speed / sprint_speed, 0.4, 1.0
-		)
-		body.apply_impulse(impulse, collision.get_position() - body.global_position)
+		var deficit := desired + body.linear_velocity.dot(normal)
+		if deficit <= 0.0:
+			continue  # already outrunning the shove
+		# Push level with the centre of mass: the crate slides instead of
+		# somersaulting over the contact point. Cans still roll via the ground.
+		var at := collision.get_position()
+		at.y = body.global_position.y
+		var impulse := -normal * minf(deficit * body.mass, push_max_force * delta)
+		body.apply_impulse(impulse, at - body.global_position)
 
 
 func _detect_landing() -> void:

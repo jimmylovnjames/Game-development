@@ -2,5 +2,5 @@
 
 [resource]
 resource_name = "pm_crate"
-friction = 1.05
-bounce = 0.12
+friction = 0.8
+bounce = 0.1
