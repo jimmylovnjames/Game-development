@@ -84,7 +84,7 @@ func _make_streaks() -> GPUParticles3D:
 	particles.process_material = material
 
 	var mesh := BoxMesh.new()
-	mesh.size = Vector3(0.014, 0.55, 0.014)
+	mesh.size = Vector3(0.02, 0.6, 0.02)
 	mesh.material = STREAK_MATERIAL
 	particles.draw_pass_1 = mesh
 

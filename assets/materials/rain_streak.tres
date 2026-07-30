@@ -6,5 +6,5 @@
 resource_name = "rain_streak"
 render_priority = 0
 shader = ExtResource("1_streak")
-shader_parameter/streak_color = Color(0.45, 0.55, 0.75, 0.32)
+shader_parameter/streak_color = Color(0.5, 0.6, 0.8, 0.5)
 shader_parameter/tip_fade = 0.5
