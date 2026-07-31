@@ -19,13 +19,13 @@ uniform vec4 oil_color : source_color = vec4(0.04, 0.05, 0.07, 1.0);
 uniform float roughness : hint_range(0.0, 1.0) = 0.28;
 
 group_uniforms Detail;
-uniform float asphalt_scale : hint_range(0.02, 2.0) = 0.18;
-uniform float patch_scale : hint_range(0.01, 1.0) = 0.045;
-uniform float crack_scale : hint_range(0.05, 4.0) = 0.55;
-uniform float crack_width : hint_range(0.01, 0.4) = 0.11;
-uniform float oil_scale : hint_range(0.01, 1.0) = 0.07;
-uniform float oil_amount : hint_range(0.0, 1.0) = 0.35;
-uniform float wetness : hint_range(0.0, 1.0) = 0.7;
+uniform float asphalt_scale : hint_range(0.02, 2.0) = 0.22;
+uniform float patch_scale : hint_range(0.01, 1.0) = 0.05;
+uniform float crack_scale : hint_range(0.05, 4.0) = 0.28;
+uniform float crack_width : hint_range(0.01, 0.4) = 0.045;
+uniform float oil_scale : hint_range(0.01, 1.0) = 0.06;
+uniform float oil_amount : hint_range(0.0, 1.0) = 0.22;
+uniform float wetness : hint_range(0.0, 1.0) = 0.55;
 
 group_uniforms Markings;
 // Lane dashes sit on the street lattice the blockout also uses.
@@ -34,7 +34,7 @@ uniform float dash_half_width : hint_range(0.02, 0.5) = 0.08;
 uniform float dash_length : hint_range(0.2, 4.0) = 1.4;
 uniform float dash_gap : hint_range(0.2, 6.0) = 2.2;
 uniform vec4 paint_color : source_color = vec4(0.55, 0.52, 0.42, 1.0);
-uniform float paint_strength : hint_range(0.0, 1.0) = 0.55;
+uniform float paint_strength : hint_range(0.0, 1.0) = 0.4;
 
 group_uniforms Cel;
 uniform float light_bands : hint_range(1.0, 6.0, 1.0) = 2.0;
@@ -46,7 +46,7 @@ uniform float shadow_tint_strength : hint_range(0.0, 1.0) = 0.45;
 group_uniforms Specular;
 uniform float spec_threshold : hint_range(0.0, 1.0) = 0.35;
 uniform float spec_softness : hint_range(0.001, 0.5) = 0.4;
-uniform float spec_strength : hint_range(0.0, 4.0) = 0.55;
+uniform float spec_strength : hint_range(0.0, 4.0) = 0.4;
 
 group_uniforms Rim;
 uniform vec4 rim_color : source_color = vec4(1.0, 0.18, 0.58, 1.0);
@@ -135,13 +135,16 @@ void fragment() {
 	vec2 wp = v_world_pos.xz;
 
 	float grain = street_fbm(wp * asphalt_scale);
-	float patches = smoothstep(0.55, 0.78, street_fbm(wp * patch_scale + 3.1));
+	float patches = smoothstep(0.62, 0.88, street_fbm(wp * patch_scale + 3.1));
+	// Thin dark veins only — wide crack_width turns the Voronoi cells into a
+	// glowing honeycomb under wet specular, which fights the comic read.
 	float cracks = 1.0 - smoothstep(0.0, crack_width, crack_field(wp * crack_scale));
-	float oil = smoothstep(0.62, 0.9, street_fbm(wp * oil_scale + 11.7)) * oil_amount;
+	cracks = pow(cracks, 2.5);
+	float oil = smoothstep(0.72, 0.95, street_fbm(wp * oil_scale + 11.7)) * oil_amount;
 
-	vec3 base = mix(asphalt_color.rgb, patch_color.rgb, patches * 0.55);
-	base = mix(base, base * (0.75 + grain * 0.35), 0.85);
-	base = mix(base, crack_color.rgb, cracks * 0.85);
+	vec3 base = mix(asphalt_color.rgb, patch_color.rgb, patches * 0.35);
+	base *= 0.82 + grain * 0.28;
+	base = mix(base, crack_color.rgb, cracks * 0.7);
 	base = mix(base, oil_color.rgb, oil);
 
 	float paint = lane_paint(wp) * paint_strength;
@@ -178,6 +181,6 @@ void light() {
 
 	float spec = cel_spec(n, l, VIEW, ROUGHNESS, spec_threshold, spec_softness);
 	// Wetness boosts the soft specular so neon actually stretches on the street.
-	float wet_boost = mix(0.55, 1.35, 1.0 - ROUGHNESS);
+	float wet_boost = mix(0.45, 1.1, 1.0 - ROUGHNESS);
 	SPECULAR_LIGHT += spec * spec_strength * wet_boost * LIGHT_COLOR * ATTENUATION;
 }
