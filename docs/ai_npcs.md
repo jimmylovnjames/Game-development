@@ -82,3 +82,11 @@ to say, never through codex dumps.
 `tools/soak_test.gd` stage 9 asserts — without any network — that shells exist,
 kernels compose, forbidden scopes deflect, flag-gated knowledge unlocks after
 the Vex beat, and the backend is offline when unconfigured.
+
+## The rumor mill
+
+`GossipNetwork` listens for knowledge items shared by any shell and writes
+them into circulation. Every `spread_interval` seconds a random item is
+repeated by a *different* persona as hearsay ("Word is — …", "Marrow says —
+…"), consumed on use so it never repeats. What you hear in the plaza comes
+back to you bent — the district talks about what you were told.
