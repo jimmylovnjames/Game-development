@@ -19,6 +19,7 @@ var _debug_visible: bool = true
 var _flags: WorldFlags
 var _quests: QuestSystem
 var _dialogue: DialogueUI
+var _backend: NpcLlmBackend
 var _prompt_label: Label
 var _vex: NpcVex
 
@@ -32,6 +33,10 @@ func _ready() -> void:
 	_quests.name = "QuestSystem"
 	_quests.flags = _flags
 	add_child(_quests)
+
+	_backend = NpcLlmBackend.new()
+	_backend.name = "NpcLlmBackend"
+	add_child(_backend)
 
 	_dialogue = DIALOGUE_SCENE.instantiate() as DialogueUI
 	add_child(_dialogue)
@@ -54,10 +59,12 @@ func _ready() -> void:
 	$DebugHUD.add_child(_prompt_label)
 
 	_spawn_vex()
+	_bind_persona_shells()
 
 	_player.global_position = _blockout.get_spawn_point()
 	_player.interactable_changed.connect(_on_interactable_changed)
 	_player.landed.connect(_on_landed)
+	_player.add_to_group("player")
 
 	if print_boot_report:
 		call_deferred("_print_boot_report")
@@ -70,6 +77,14 @@ func _spawn_vex() -> void:
 	_vex.position = Vector3(4.5, 0.0, -3.5)
 	$World.add_child(_vex)
 	_vex.bind(_dialogue, _quests)
+
+
+## Persona shells spawn with the blockout (before systems exist), so binding
+## happens here, once the backend and flags are live.
+func _bind_persona_shells() -> void:
+	for shell in get_tree().get_nodes_in_group("persona_shells"):
+		if shell is PersonaShell:
+			shell.bind(_dialogue, _flags, _backend)
 
 
 func _print_boot_report() -> void:

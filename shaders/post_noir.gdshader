@@ -14,12 +14,26 @@ group_uniforms ChromaticAberration;
 // Screen-edge channel split. Keep low: it is a printing defect, not a trip.
 uniform float aberration : hint_range(0.0, 3.0) = 0.55;
 
+group_uniforms Print;
+// Quantise into a limited palette, like ink on cheap paper.
+uniform float posterize_levels : hint_range(4.0, 64.0) = 14.0;
+uniform float posterize_strength : hint_range(0.0, 1.0) = 0.32;
+// Saturate the mid-tones; neon pops, greys stay grey.
+uniform float vibrance : hint_range(0.0, 1.5) = 0.4;
+
 group_uniforms Halftone;
 // Ben-Day dots in the shadows. Density fades out toward the midtones so lit
 // neon stays clean; shadow areas get the printed-ink texture.
 uniform float halftone_strength : hint_range(0.0, 1.0) = 0.16;
 uniform float halftone_cell_px : hint_range(3.0, 24.0) = 7.0;
 uniform float halftone_shadow_cutoff : hint_range(0.0, 1.0) = 0.42;
+
+group_uniforms Crosshatch;
+// Diagonal pen strokes in deep shadow — the second family appears only in
+// the darkest band, like a colourist hatching twice.
+uniform float hatch_strength : hint_range(0.0, 1.0) = 0.4;
+uniform float hatch_cell_px : hint_range(4.0, 32.0) = 10.0;
+uniform float hatch_lum : hint_range(0.0, 1.0) = 0.3;
 
 group_uniforms Grain;
 uniform float grain_strength : hint_range(0.0, 0.4) = 0.055;
@@ -49,6 +63,12 @@ void fragment() {
 
 	float lum = dot(col, vec3(0.299, 0.587, 0.114));
 
+	// Posterize into ink levels, then push the saturated colours harder.
+	vec3 flat_col = floor(col * posterize_levels + 0.5) / posterize_levels;
+	col = mix(col, flat_col, posterize_strength);
+	float sat = clamp(lum, 0.0, 1.0);
+	col = mix(vec3(lum), col, 1.0 + vibrance * (1.0 - abs(sat - 0.5) * 2.0));
+
 	// Halftone: one dot per cell, dot radius grows as the tone darkens.
 	float shadow_mask = 1.0 - smoothstep(
 		halftone_shadow_cutoff * 0.5, halftone_shadow_cutoff, lum
@@ -57,6 +77,13 @@ void fragment() {
 	float dot_radius = length(cell) * 1.4142; // 0 centre .. ~1 corner
 	float ink = smoothstep(0.9, 0.35, dot_radius);
 	col *= 1.0 - halftone_strength * shadow_mask * ink;
+
+	// Crosshatch: diagonal strokes where the tone drops into shadow.
+	float hatch_a = step(0.5, fract((FRAGCOORD.x + FRAGCOORD.y) / hatch_cell_px));
+	float hatch_b = step(0.5, fract((FRAGCOORD.x - FRAGCOORD.y) / hatch_cell_px));
+	float hatch_mask = (1.0 - smoothstep(hatch_lum * 0.4, hatch_lum, lum)) * hatch_a;
+	hatch_mask += (1.0 - smoothstep(hatch_lum * 0.15, hatch_lum * 0.5, lum)) * hatch_b * 0.7;
+	col *= 1.0 - hatch_strength * clamp(hatch_mask, 0.0, 1.0);
 
 	// Vignette, biased toward the bottom of the frame where the street sits.
 	float vign = smoothstep(

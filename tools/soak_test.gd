@@ -114,8 +114,10 @@ func _physics_process(_delta: float) -> bool:
 				_dialogue_advances += 1
 			if _dialogue_advances >= DIALOGUE_LINES + 1:
 				_finish_talk()
-				_report()
-				return true
+		9:
+			_finish_persona_checks()
+			_report()
+			return true
 	return false
 
 
@@ -295,6 +297,68 @@ func _finish_talk() -> void:
 		_fail("talk_to_vex objective was not completed")
 	else:
 		_ok("MQ01 talk_to_vex completed via dialogue")
+	_next_stage()
+
+
+## Kernel-level persona assertions: knowledge boundaries, forbidden-scope
+## deflection, flag-gated reveals unlocked by the quest beat in stage 8, and
+## the LLM backend's offline-by-default behaviour (no key in CI).
+func _finish_persona_checks() -> void:
+	print("[stage 9: persona shells]")
+	var marrow := _find_shell(&"marrow_scrap")
+	var amp := _find_shell(&"sister_amp")
+	var bram := _find_shell(&"warden_bram")
+
+	if marrow == null or amp == null or bram == null:
+		_fail("expected persona shells missing from the district")
+		return
+	_ok("three persona shells present")
+
+	if marrow.compose_lines().is_empty():
+		_fail("marrow produced no kernel lines")
+	else:
+		_ok("marrow kernel composes lines")
+
+	var forbidden := marrow.answer_about(&"pass_buyer")
+	if not bool(forbidden.get("deflected", false)):
+		_fail("marrow answered a forbidden scope instead of deflecting")
+	else:
+		_ok("marrow deflects pass_buyer: \"%s\"" % str(forbidden["text"]).left(42))
+
+	var allowed := marrow.answer_about(&"scrap")
+	if bool(allowed.get("deflected", true)):
+		_fail("marrow deflected his own trade")
+	else:
+		_ok("marrow answers scrap within his knowledge")
+
+	var bram_pass := bram.answer_about(&"pass")
+	if not bool(bram_pass.get("deflected", false)):
+		_fail("bram talked about passes; his forbidden scope failed")
+	else:
+		_ok("bram refuses the pass topic")
+
+	var amp_pass := amp.answer_about(&"pass")
+	if bool(amp_pass.get("deflected", true)):
+		_fail("amp's flag-gated warning did not unlock after talk_to_vex")
+	else:
+		_ok("amp's gated knowledge unlocked via quest flag")
+
+	var backend := _scene.get_node_or_null("NpcLlmBackend") as NpcLlmBackend
+	if backend == null:
+		_fail("NpcLlmBackend missing from the scene")
+	elif backend.is_active():
+		_fail("LLM backend active without a configured key in CI")
+	else:
+		_ok("LLM backend offline by default (kernel is the voice)")
+
+
+func _find_shell(persona_id: StringName) -> PersonaShell:
+	for shell in get_nodes_in_group("persona_shells"):
+		var persona := shell as PersonaShell
+		if persona != null and persona.profile != null \
+				and persona.profile.persona_id == persona_id:
+			return persona
+	return null
 
 
 func _begin_jump() -> void:

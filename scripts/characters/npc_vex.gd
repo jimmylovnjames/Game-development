@@ -50,6 +50,7 @@ func _on_interact(_who: Node3D) -> void:
 	if not _dialogue.cancelled.is_connected(_on_dialogue_cancelled):
 		_dialogue.cancelled.connect(_on_dialogue_cancelled, CONNECT_ONE_SHOT)
 	_dialogue.open(interactable_id, DISPLAY_NAME, _lines)
+	_dialogue.set_speaker_color(Color(1.0, 0.176, 0.584))
 
 
 func _on_dialogue_finished(speaker_id: StringName) -> void:

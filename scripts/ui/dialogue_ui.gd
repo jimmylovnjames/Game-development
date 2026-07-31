@@ -28,6 +28,20 @@ func is_active() -> bool:
 	return _active
 
 
+func set_speaker_color(color: Color) -> void:
+	_speaker.add_theme_color_override("font_color", color)
+
+
+## Swap the body mid-conversation (LLM reply arriving after the "…" placeholder
+## or a kernel fallback taking over). Restarts at the first new line.
+func replace_lines(lines: PackedStringArray) -> void:
+	if lines.is_empty() or not _active:
+		return
+	_lines = lines
+	_index = 0
+	_show_line()
+
+
 func open(speaker_id: StringName, speaker_name: String, lines: PackedStringArray) -> void:
 	if lines.is_empty():
 		return

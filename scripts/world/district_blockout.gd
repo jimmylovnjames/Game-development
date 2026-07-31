@@ -18,6 +18,12 @@ const PUDDLE := preload("res://assets/materials/puddle.tres")
 const HOLO_MAGENTA := preload("res://assets/materials/hologram_magenta.tres")
 const HOLO_CYAN := preload("res://assets/materials/hologram_cyan.tres")
 const POSTER := preload("res://assets/materials/toon_poster.tres")
+const COLOSSUS := preload("res://assets/materials/holo_colossus.tres")
+const SHELL_SCENE := preload("res://scenes/characters/persona_shell.tscn")
+const PERSONA_MARROW := preload("res://assets/personas/marrow_scrap.tres")
+const PERSONA_AMP := preload("res://assets/personas/sister_amp.tres")
+const PERSONA_KIP := preload("res://assets/personas/kip_dockrat.tres")
+const PERSONA_BRAM := preload("res://assets/personas/warden_bram.tres")
 const CRATE_SCENE := preload("res://scenes/props/physics_crate.tscn")
 const CAN_SCENE := preload("res://scenes/props/physics_can.tscn")
 const DUMPSTER_SCENE := preload("res://scenes/props/dumpster.tscn")
@@ -79,6 +85,7 @@ const LAMP_COLOR := Color(1.0, 0.68, 0.36)
 const CABLE_SEGMENTS := 9
 const SIDEWALK_WIDTH := 2.2
 const KERB_HEIGHT := 0.14
+const ACID_YELLOW := Color(0.969, 1.0, 0.235)
 
 var _rng := RandomNumberGenerator.new()
 var _building_count: int = 0
@@ -123,9 +130,11 @@ func generate() -> void:
 	_spawn_cables()
 	_spawn_puddles(stride, half)
 	_spawn_holo_boards()
+	_spawn_colossus()
 	_spawn_steam_vents(stride, half)
 	_spawn_street_dressing(stride, half)
 	_spawn_physics_props(stride, half)
+	_spawn_people()
 
 	print("[DistrictBlockout] seed=%d buildings=%d signs=%d street_props=%d" % [
 		world_seed, _building_count, _sign_count,
@@ -210,10 +219,17 @@ func _spawn_sign(building: StaticBody3D, size: Vector3) -> void:
 	var box_mesh := BoxMesh.new()
 	box_mesh.size = sign_size
 	mesh_instance.mesh = box_mesh
-	# Duplicate so per-sign flicker phase does not desync every other sign.
+	# Duplicate so per-sign flicker phase does not desync every other sign, and
+	# so each city block leans on its own neon family instead of one palette.
+	var cell := _cell_of(building)
+	var family := _cell_family(cell)
 	var material: ShaderMaterial = (
-		NEON_MAGENTA if _rng.randf() < 0.55 else NEON_CYAN
+		NEON_MAGENTA if family < 6 else NEON_CYAN
 	).duplicate()
+	if family >= 9:
+		material.set_shader_parameter("neon_color", ACID_YELLOW)
+	elif family == 8:
+		material.set_shader_parameter("neon_color", LAMP_COLOR)
 	material.set_shader_parameter("phase_offset", _rng.randf_range(0.0, 100.0))
 	material.set_shader_parameter("dropout_chance", _rng.randf_range(0.0, 0.12))
 	mesh_instance.material_override = material
@@ -228,6 +244,21 @@ func _spawn_sign(building: StaticBody3D, size: Vector3) -> void:
 	holder.add_child(light)
 
 	_sign_count += 1
+
+
+## Which lattice cell a building body lives in; recorded at spawn so signage
+## and window lights can share one neon family per block.
+func _cell_of(building: StaticBody3D) -> Vector2i:
+	for cell: Vector2i in _buildings:
+		if _buildings[cell]["body"] == building:
+			return cell
+	return Vector2i.ZERO
+
+
+## Deterministic block flavour: 0-5 magenta-led, 6-7 cyan-led, 8 amber, 9 acid.
+func _cell_family(cell: Vector2i) -> int:
+	var h := int(cell.x * 73856093) ^ int(cell.y * 19349663)
+	return abs(h) % 10
 
 
 func _spawn_rubble(centre: Vector3) -> void:
@@ -511,9 +542,15 @@ func _spawn_window_lights(body: StaticBody3D, size: Vector3) -> void:
 		)
 		pane.mesh = box
 		pane.position = offset + along + Vector3(0.0, local_y, 0.0)
+		# Window light hue follows the block's neon family so a street corner
+		# reads as one neighbourhood, not a bag of random colours.
+		var family := _cell_family(_cell_of(body))
+		var cyan_chance := 0.85 if family >= 6 and family < 9 else 0.45
 		var material: ShaderMaterial = (
-			NEON_CYAN if _rng.randf() < 0.65 else NEON_MAGENTA
+			NEON_CYAN if _rng.randf() < cyan_chance else NEON_MAGENTA
 		).duplicate()
+		if family == 9 and _rng.randf() < 0.3:
+			material.set_shader_parameter("neon_color", ACID_YELLOW)
 		material.set_shader_parameter("energy", _rng.randf_range(0.9, 1.6))
 		material.set_shader_parameter("flicker_amount", _rng.randf_range(0.0, 0.08))
 		material.set_shader_parameter("dropout_chance", 0.0)
@@ -690,6 +727,46 @@ func _spawn_street_dressing(stride: float, half: float) -> void:
 			scaffold.position = _random_kerbside(stride, half)
 			scaffold.rotation.y = _rng.randf_range(-PI, PI)
 		holder.add_child(scaffold)
+
+
+## AD-7: a building-scale watching face on the tallest tower, angled back at
+## the plaza. One per district; it is the skyline's signature.
+func _spawn_colossus() -> void:
+	var tallest: Dictionary = {}
+	var best := 0.0
+	for record: Dictionary in _buildings.values():
+		if record["size"].y > best:
+			best = record["size"].y
+			tallest = record
+	if tallest.is_empty():
+		return
+
+	var body: StaticBody3D = tallest["body"]
+	var size: Vector3 = tallest["size"]
+
+	var holder := Node3D.new()
+	holder.name = "Colossus"
+	body.add_child(holder)
+	holder.position = Vector3(0.0, size.y * 0.28, size.z * 0.5 + 0.7)
+
+	var panel := MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(11.0, 14.0)
+	panel.mesh = quad
+	var material: ShaderMaterial = COLOSSUS.duplicate()
+	material.set_shader_parameter("phase_offset", _rng.randf_range(0.0, 100.0))
+	panel.material_override = material
+	panel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	holder.add_child(panel)
+
+	# The face must light its own tower or it reads as a sticker.
+	var light := OmniLight3D.new()
+	light.light_color = Color(0.0, 0.898, 1.0)
+	light.light_energy = 2.4
+	light.omni_range = 38.0
+	light.shadow_enabled = false
+	light.position = Vector3(0.0, 0.0, 3.0)
+	holder.add_child(light)
 
 
 ## Kerbside point: on the sidewalk strip rather than mid-carriageway.
@@ -947,6 +1024,33 @@ func _spawn_physics_props(stride: float, half: float) -> void:
 		if tipped:
 			can.rotation = Vector3(PI * 0.5, _rng.randf_range(-PI, PI), 0.0)
 		holder.add_child(can)
+
+
+## The plaza's regulars. Positions are fixed (not seeded) so designers and
+## tests always know where a given persona stands. Silhouettes vary so each
+## reads at distance even before the bark label says who it is.
+func _spawn_people() -> void:
+	var holder := Node3D.new()
+	holder.name = "People"
+	add_child(holder)
+
+	# persona, position, yaw, body scale
+	var placements := [
+		{"profile": PERSONA_MARROW, "pos": Vector3(7.5, 0.0, 3.0), "yaw": -2.2, "scale": Vector3(1.25, 0.92, 1.25)},
+		{"profile": PERSONA_AMP, "pos": Vector3(-4.5, 0.0, 5.5), "yaw": 0.6, "scale": Vector3(0.9, 1.08, 0.9)},
+		{"profile": PERSONA_KIP, "pos": Vector3(10.0, 0.0, -8.0), "yaw": 2.8, "scale": Vector3(0.75, 0.82, 0.75)},
+		{"profile": PERSONA_BRAM, "pos": Vector3(-9.0, 0.0, -7.0), "yaw": -0.4, "scale": Vector3(1.18, 1.0, 1.18)},
+	]
+	for entry: Dictionary in placements:
+		var shell := SHELL_SCENE.instantiate() as PersonaShell
+		shell.name = "Shell_%s" % entry["profile"].persona_id
+		shell.profile = entry["profile"]
+		shell.position = entry["pos"]
+		shell.rotation.y = entry["yaw"]
+		var mesh := shell.get_node_or_null("Mesh") as MeshInstance3D
+		if mesh != null:
+			mesh.scale = entry["scale"]
+		holder.add_child(shell)
 
 
 ## A point on the street network (the gaps between lot rows), never on a lot.

@@ -118,6 +118,10 @@ func _match(kind: QuestObjective.Kind, target_id: StringName) -> void:
 				continue
 			done[objective.id] = true
 			objective_completed.emit(quest, objective)
+			# Convention: a completed objective id doubles as a world flag, so
+			# persona knowledge can gate on story beats without extra wiring.
+			if flags != null:
+				flags.set_flag(objective.id, true)
 			print("[QuestSystem] objective '%s' done on '%s'" % [objective.id, quest.id])
 			_try_auto_complete(quest_id)
 			return
