@@ -1,7 +1,9 @@
-[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+[gd_resource type="ShaderMaterial" load_steps=5 format=3]
 
 [ext_resource type="Shader" path="res://shaders/toon_cel.gdshader" id="1_toon"]
 [ext_resource type="Material" path="res://assets/materials/outline_ink.tres" id="2_ink"]
+[ext_resource type="Texture2D" path="res://assets/textures/concrete_grain.tres" id="3_grain"]
+[ext_resource type="Texture2D" path="res://assets/textures/grime_mask.tres" id="4_grime"]
 
 [resource]
 resource_name = "toon_concrete"
@@ -9,7 +11,8 @@ render_priority = 0
 next_pass = ExtResource("2_ink")
 shader = ExtResource("1_toon")
 shader_parameter/albedo_color = Color(0.29, 0.29, 0.33, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/albedo_texture = ExtResource("3_grain")
+shader_parameter/uv_scale = Vector2(2.5, 2.5)
 shader_parameter/roughness = 0.88
 shader_parameter/metallic = 0.0
 shader_parameter/light_bands = 3.0
@@ -26,6 +29,7 @@ shader_parameter/rim_strength = 0.7
 shader_parameter/rim_light_bias = 0.6
 shader_parameter/emission_color = Color(0, 0, 0, 1)
 shader_parameter/emission_energy = 0.0
+shader_parameter/grime_texture = ExtResource("4_grime")
 shader_parameter/grime_color = Color(0.19, 0.1, 0.06, 1)
-shader_parameter/grime_strength = 0.0
-shader_parameter/grime_up_bias = 0.0
+shader_parameter/grime_strength = 0.35
+shader_parameter/grime_up_bias = 0.25

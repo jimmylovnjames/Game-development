@@ -133,28 +133,33 @@ func _check_prop_scenes() -> void:
 	for path: String in [
 		"res://scenes/props/physics_crate.tscn",
 		"res://scenes/props/physics_can.tscn",
+		"res://scenes/props/dumpster.tscn",
+		"res://scenes/props/jersey_barrier.tscn",
+		"res://scenes/props/bollard.tscn",
+		"res://scenes/props/traffic_cone.tscn",
+		"res://scenes/props/manhole.tscn",
+		"res://scenes/props/scaffold_frame.tscn",
 	]:
 		var packed := load(path) as PackedScene
 		if packed == null:
 			_fail("%s failed to load" % path)
 			continue
 		var instance := packed.instantiate()
-		var body := instance as RigidBody3D
-		if body == null:
-			_fail("%s root is not a RigidBody3D" % path)
-			instance.free()
+		if instance == null:
+			_fail("%s failed to instantiate" % path)
 			continue
-		if not instance.is_in_group("physics_props"):
-			_fail("%s is not in group 'physics_props'" % path)
-		elif instance.get_script() == null:
-			_fail("%s has no script attached" % path)
-		elif body.physics_material_override == null:
-			_fail("%s has no physics_material_override" % path)
+		var body := instance as RigidBody3D
+		if body != null:
+			if not instance.is_in_group("physics_props"):
+				_fail("%s is not in group 'physics_props'" % path)
+			elif instance.get_script() == null:
+				_fail("%s has no script attached" % path)
+			elif body.physics_material_override == null:
+				_fail("%s has no physics_material_override" % path)
+			else:
+				_ok("%s: RigidBody3D, %.1f kg" % [path.get_file(), body.mass])
 		else:
-			_ok("%s: RigidBody3D, %.1f kg, material %s" % [
-				path.get_file(), body.mass,
-				body.physics_material_override.resource_name,
-			])
+			_ok("%s: %s" % [path.get_file(), instance.get_class()])
 		instance.free()
 
 

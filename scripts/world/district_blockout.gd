@@ -9,6 +9,7 @@ extends Node3D
 ## depending on anything here.
 
 const CONCRETE := preload("res://assets/materials/toon_concrete.tres")
+const SIDEWALK := preload("res://assets/materials/toon_sidewalk.tres")
 const NEON_MAGENTA := preload("res://assets/materials/neon_magenta.tres")
 const NEON_CYAN := preload("res://assets/materials/neon_cyan.tres")
 const METAL_DARK := preload("res://assets/materials/toon_metal_dark.tres")
@@ -16,8 +17,15 @@ const RUST := preload("res://assets/materials/toon_rust.tres")
 const PUDDLE := preload("res://assets/materials/puddle.tres")
 const HOLO_MAGENTA := preload("res://assets/materials/hologram_magenta.tres")
 const HOLO_CYAN := preload("res://assets/materials/hologram_cyan.tres")
+const POSTER := preload("res://assets/materials/toon_poster.tres")
 const CRATE_SCENE := preload("res://scenes/props/physics_crate.tscn")
 const CAN_SCENE := preload("res://scenes/props/physics_can.tscn")
+const DUMPSTER_SCENE := preload("res://scenes/props/dumpster.tscn")
+const BARRIER_SCENE := preload("res://scenes/props/jersey_barrier.tscn")
+const BOLLARD_SCENE := preload("res://scenes/props/bollard.tscn")
+const CONE_SCENE := preload("res://scenes/props/traffic_cone.tscn")
+const MANHOLE_SCENE := preload("res://scenes/props/manhole.tscn")
+const SCAFFOLD_SCENE := preload("res://scenes/props/scaffold_frame.tscn")
 
 @export_group("Layout")
 ## Same seed always produces the same block, so bug reports stay reproducible.
@@ -56,11 +64,21 @@ const CAN_SCENE := preload("res://scenes/props/physics_can.tscn")
 @export_group("Props")
 @export var crate_count: int = 8
 @export var can_count: int = 14
+@export var dumpster_count: int = 7
+@export var barrier_count: int = 10
+@export var bollard_group_count: int = 8
+@export var cone_count: int = 12
+@export var manhole_count: int = 9
+@export var scaffold_count: int = 5
+@export var poster_chance: float = 0.45
+@export var window_light_chance: float = 0.7
 
 const LAMP_HEIGHT := 6.0
 const LAMP_ARM := 1.3
 const LAMP_COLOR := Color(1.0, 0.68, 0.36)
 const CABLE_SEGMENTS := 9
+const SIDEWALK_WIDTH := 2.2
+const KERB_HEIGHT := 0.14
 
 var _rng := RandomNumberGenerator.new()
 var _building_count: int = 0
@@ -101,14 +119,17 @@ func generate() -> void:
 			_spawn_building(centre, Vector2i(gx, gz))
 
 	_spawn_street_lamps(stride, half)
+	_spawn_sidewalks(stride, half)
 	_spawn_cables()
 	_spawn_puddles(stride, half)
 	_spawn_holo_boards()
 	_spawn_steam_vents(stride, half)
+	_spawn_street_dressing(stride, half)
 	_spawn_physics_props(stride, half)
 
-	print("[DistrictBlockout] seed=%d buildings=%d signs=%d props=%d" % [
-		world_seed, _building_count, _sign_count, crate_count + can_count,
+	print("[DistrictBlockout] seed=%d buildings=%d signs=%d street_props=%d" % [
+		world_seed, _building_count, _sign_count,
+		crate_count + can_count + dumpster_count + barrier_count + cone_count,
 	])
 
 
@@ -149,6 +170,8 @@ func _spawn_building(centre: Vector3, cell: Vector2i) -> void:
 	_building_count += 1
 
 	_spawn_rooftop_clutter(body, size)
+	_spawn_window_lights(body, size)
+	_spawn_wall_posters(body, size)
 
 	if _rng.randf() < sign_chance:
 		_spawn_sign(body, size)
@@ -453,6 +476,231 @@ func _make_roof_pipe(parent: Node3D, spot: Vector3, size: Vector3) -> void:
 	pipe.rotation.y = _rng.randf_range(-0.1, 0.1)
 	pipe.material_override = RUST
 	parent.add_child(pipe)
+
+
+## Lit windows: a few emissive boxes on each face so towers read as inhabited
+## rather than solid concrete. Kept dim so the glow pass blooms them without
+## tonemapping to white.
+func _spawn_window_lights(body: StaticBody3D, size: Vector3) -> void:
+	if _rng.randf() > window_light_chance:
+		return
+	var faces := [
+		{"normal": Vector3.FORWARD, "offset": Vector3(0.0, 0.0, -size.z * 0.5 - 0.04)},
+		{"normal": Vector3.BACK, "offset": Vector3(0.0, 0.0, size.z * 0.5 + 0.04)},
+		{"normal": Vector3.LEFT, "offset": Vector3(-size.x * 0.5 - 0.04, 0.0, 0.0)},
+		{"normal": Vector3.RIGHT, "offset": Vector3(size.x * 0.5 + 0.04, 0.0, 0.0)},
+	]
+	var count := _rng.randi_range(2, 5)
+	for i in count:
+		var face: Dictionary = faces[_rng.randi() % faces.size()]
+		var offset: Vector3 = face["offset"]
+		var local_y := _rng.randf_range(-size.y * 0.35, size.y * 0.4)
+		var lateral := _rng.randf_range(-0.35, 0.35)
+		var along := Vector3.ZERO
+		if absf(offset.x) > absf(offset.z):
+			along = Vector3(0.0, 0.0, lateral * size.z)
+		else:
+			along = Vector3(lateral * size.x, 0.0, 0.0)
+
+		var pane := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(
+			_rng.randf_range(0.6, 1.4) if absf(offset.z) > absf(offset.x) else 0.08,
+			_rng.randf_range(0.7, 1.5),
+			_rng.randf_range(0.6, 1.4) if absf(offset.x) > absf(offset.z) else 0.08,
+		)
+		pane.mesh = box
+		pane.position = offset + along + Vector3(0.0, local_y, 0.0)
+		var material: ShaderMaterial = (
+			NEON_CYAN if _rng.randf() < 0.65 else NEON_MAGENTA
+		).duplicate()
+		material.set_shader_parameter("energy", _rng.randf_range(0.9, 1.6))
+		material.set_shader_parameter("flicker_amount", _rng.randf_range(0.0, 0.08))
+		material.set_shader_parameter("dropout_chance", 0.0)
+		material.set_shader_parameter("phase_offset", _rng.randf_range(0.0, 100.0))
+		pane.material_override = material
+		pane.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		body.add_child(pane)
+
+
+## Weathered posters stuck low on the walls — colour without claiming neon.
+func _spawn_wall_posters(body: StaticBody3D, size: Vector3) -> void:
+	if _rng.randf() > poster_chance:
+		return
+	var faces := [
+		{"yaw": PI, "offset": Vector3(0.0, 0.0, -size.z * 0.5 - 0.05)},
+		{"yaw": 0.0, "offset": Vector3(0.0, 0.0, size.z * 0.5 + 0.05)},
+		{"yaw": -PI * 0.5, "offset": Vector3(-size.x * 0.5 - 0.05, 0.0, 0.0)},
+		{"yaw": PI * 0.5, "offset": Vector3(size.x * 0.5 + 0.05, 0.0, 0.0)},
+	]
+	for i in _rng.randi_range(1, 2):
+		var face: Dictionary = faces[_rng.randi() % faces.size()]
+		var poster := MeshInstance3D.new()
+		var quad := QuadMesh.new()
+		quad.size = Vector2(_rng.randf_range(0.9, 1.8), _rng.randf_range(1.2, 2.4))
+		poster.mesh = quad
+		poster.position = face["offset"] + Vector3(
+			0.0, -size.y * _rng.randf_range(0.15, 0.35), 0.0
+		)
+		poster.rotation.y = face["yaw"]
+		var material: ShaderMaterial = POSTER.duplicate()
+		if _rng.randf() < 0.5:
+			material.set_shader_parameter("emission_color", Color(0.0, 0.898, 1.0))
+			material.set_shader_parameter("rim_color", Color(0.0, 0.898, 1.0))
+		material.set_shader_parameter(
+			"emission_energy", _rng.randf_range(0.2, 0.55)
+		)
+		poster.material_override = material
+		poster.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		body.add_child(poster)
+
+
+## Raised sidewalk ribbons along both street axes, with a thin kerb lip so the
+## street edge reads as a street edge instead of a painted line on a flat plane.
+func _spawn_sidewalks(stride: float, half: float) -> void:
+	var holder := Node3D.new()
+	holder.name = "Sidewalks"
+	add_child(holder)
+
+	# One segment per street cell, cut short of the junction so corners do not
+	# stack four overlapping slabs on top of each other.
+	var segment := stride - street_width * 0.85
+	for axis in 2:
+		for line in grid_size + 1:
+			for along_i in grid_size:
+				var centre_coord := (line - half - 0.5) * stride
+				var along_coord := (along_i - half) * stride
+				for side_i in 2:
+					var side := -1.0 if side_i == 0 else 1.0
+					var offset: float = side * (street_width * 0.5 - SIDEWALK_WIDTH * 0.5)
+					var pos := Vector3.ZERO
+					var slab_size := Vector3.ZERO
+					if axis == 0:
+						pos = Vector3(centre_coord + offset, KERB_HEIGHT * 0.5, along_coord)
+						slab_size = Vector3(SIDEWALK_WIDTH, KERB_HEIGHT, segment)
+					else:
+						pos = Vector3(along_coord, KERB_HEIGHT * 0.5, centre_coord + offset)
+						slab_size = Vector3(segment, KERB_HEIGHT, SIDEWALK_WIDTH)
+					if Vector2(pos.x, pos.z).length() < plaza_radius * 0.7:
+						continue
+
+					var body := StaticBody3D.new()
+					body.collision_layer = 1
+					body.collision_mask = 0
+					body.position = pos
+					holder.add_child(body)
+
+					var shape := CollisionShape3D.new()
+					var box := BoxShape3D.new()
+					box.size = slab_size
+					shape.shape = box
+					body.add_child(shape)
+
+					var mesh_instance := MeshInstance3D.new()
+					var box_mesh := BoxMesh.new()
+					box_mesh.size = slab_size
+					mesh_instance.mesh = box_mesh
+					mesh_instance.material_override = SIDEWALK
+					body.add_child(mesh_instance)
+
+					var kerb := MeshInstance3D.new()
+					var kerb_mesh := BoxMesh.new()
+					if axis == 0:
+						kerb_mesh.size = Vector3(0.16, KERB_HEIGHT * 1.2, segment)
+						kerb.position = Vector3(
+							-side * (SIDEWALK_WIDTH * 0.5 - 0.04), 0.015, 0.0
+						)
+					else:
+						kerb_mesh.size = Vector3(segment, KERB_HEIGHT * 1.2, 0.16)
+						kerb.position = Vector3(
+							0.0, 0.015, -side * (SIDEWALK_WIDTH * 0.5 - 0.04)
+						)
+					kerb.mesh = kerb_mesh
+					kerb.material_override = CONCRETE
+					body.add_child(kerb)
+
+
+## Dumpsters, barriers, bollards, cones, manholes and scaffold — the street
+## furniture that makes a greybox feel walked-in.
+func _spawn_street_dressing(stride: float, half: float) -> void:
+	var holder := Node3D.new()
+	holder.name = "StreetDressing"
+	add_child(holder)
+
+	for i in dumpster_count:
+		var dumpster := DUMPSTER_SCENE.instantiate()
+		dumpster.name = "Dumpster_%02d" % i
+		dumpster.position = _random_kerbside(stride, half) + Vector3(0.0, 0.0, 0.0)
+		dumpster.rotation.y = _rng.randf_range(-0.2, 0.2) + (
+			PI * 0.5 if _rng.randf() < 0.5 else 0.0
+		)
+		holder.add_child(dumpster)
+
+	for i in barrier_count:
+		var barrier := BARRIER_SCENE.instantiate()
+		barrier.name = "Barrier_%02d" % i
+		barrier.position = _random_street_point(stride, half)
+		barrier.rotation.y = _rng.randf_range(-PI, PI)
+		holder.add_child(barrier)
+
+	for i in bollard_group_count:
+		var origin := _random_kerbside(stride, half)
+		var count := _rng.randi_range(2, 4)
+		for j in count:
+			var bollard := BOLLARD_SCENE.instantiate()
+			bollard.name = "Bollard_%02d_%02d" % [i, j]
+			bollard.position = origin + Vector3(j * 0.7, 0.0, 0.0).rotated(
+				Vector3.UP, _rng.randf_range(0.0, TAU)
+			)
+			holder.add_child(bollard)
+
+	for i in cone_count:
+		var cone := CONE_SCENE.instantiate()
+		cone.name = "Cone_%02d" % i
+		cone.position = _random_street_point(stride, half) + Vector3(
+			_rng.randf_range(-1.5, 1.5), 0.0, _rng.randf_range(-1.5, 1.5)
+		)
+		cone.rotation.y = _rng.randf_range(-PI, PI)
+		holder.add_child(cone)
+
+	for i in manhole_count:
+		var manhole := MANHOLE_SCENE.instantiate()
+		manhole.name = "Manhole_%02d" % i
+		manhole.position = _random_street_point(stride, half)
+		manhole.rotation.y = _rng.randf_range(-PI, PI)
+		holder.add_child(manhole)
+
+	for i in scaffold_count:
+		var scaffold := SCAFFOLD_SCENE.instantiate()
+		scaffold.name = "Scaffold_%02d" % i
+		# Prefer the face of a building when one is nearby; otherwise kerbside.
+		var placed := false
+		if not _buildings.is_empty() and _rng.randf() < 0.7:
+			var keys: Array = _buildings.keys()
+			var record: Dictionary = _buildings[keys[_rng.randi() % keys.size()]]
+			var size: Vector3 = record["size"]
+			var body: StaticBody3D = record["body"]
+			scaffold.position = body.global_position + Vector3(
+				0.0, -size.y * 0.5, size.z * 0.5 + 0.7
+			)
+			scaffold.position.y = 0.0
+			scaffold.rotation.y = body.rotation.y
+			placed = true
+		if not placed:
+			scaffold.position = _random_kerbside(stride, half)
+			scaffold.rotation.y = _rng.randf_range(-PI, PI)
+		holder.add_child(scaffold)
+
+
+## Kerbside point: on the sidewalk strip rather than mid-carriageway.
+func _random_kerbside(stride: float, half: float) -> Vector3:
+	var line := _rng.randi_range(0, grid_size)
+	var along := _rng.randf_range(-half - 0.3, half + 0.3) * stride
+	var side: float = -1.0 if _rng.randf() < 0.5 else 1.0
+	var offset: float = side * (street_width * 0.5 - SIDEWALK_WIDTH * 0.55)
+	if _rng.randf() < 0.5:
+		return Vector3((line - half - 0.5) * stride + offset, 0.0, along)
+	return Vector3(along, 0.0, (line - half - 0.5) * stride + offset)
 
 
 ## Catenary cables strung between neighbouring rooftops, baked into a single

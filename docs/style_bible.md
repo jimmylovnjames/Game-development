@@ -146,11 +146,16 @@ mid-ground; leaving distant bulk architecture un-inked builds depth.
 
 `scenes/main.tscn` + `scripts/world/district_blockout.gd` generate a seeded
 placeholder district: greybox towers with dressed rooflines (water tanks, AC
-units, antennas with neon beads), hung neon signage with per-sign flicker
-phase, holographic ad boards that throw their colour onto their host wall,
-cantilevered sodium street lamps, catenary cables baked into a single
-MultiMesh, rubble lots, rain puddles with animated impact rings, steam vents,
-and shoveable rigid-body debris — all around a central plaza.
+units, antennas with neon beads), window lights and wall posters, hung neon
+signage with per-sign flicker phase, holographic ad boards, cantilevered sodium
+street lamps, catenary cables baked into a single MultiMesh, sidewalks with
+kerbs, rubble lots, rain puddles, steam vents, and street furniture (dumpsters,
+jersey barriers, bollards, traffic cones, manholes, scaffold) plus shoveable
+rigid-body debris — all around a central plaza.
+
+The ground plane uses `shaders/street_ground.gdshader`: world-space asphalt
+grain, cracks, oil stains, wet specular variation, and dashed lane paint locked
+to the same street lattice the blockout uses.
 
 It is **scaffolding for judging the shaders and camera**, not the shipping
 world generator — the chunk streamer under `worlds/` replaces it wholesale.
