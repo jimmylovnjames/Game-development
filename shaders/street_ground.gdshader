@@ -21,11 +21,11 @@ uniform float roughness : hint_range(0.0, 1.0) = 0.28;
 group_uniforms Detail;
 uniform float asphalt_scale : hint_range(0.02, 2.0) = 0.22;
 uniform float patch_scale : hint_range(0.01, 1.0) = 0.05;
-uniform float crack_scale : hint_range(0.05, 4.0) = 0.28;
-uniform float crack_width : hint_range(0.01, 0.4) = 0.045;
+uniform float wear_scale : hint_range(0.02, 2.0) = 0.4;
+uniform float wear_amount : hint_range(0.0, 1.0) = 0.35;
 uniform float oil_scale : hint_range(0.01, 1.0) = 0.06;
-uniform float oil_amount : hint_range(0.0, 1.0) = 0.22;
-uniform float wetness : hint_range(0.0, 1.0) = 0.55;
+uniform float oil_amount : hint_range(0.0, 1.0) = 0.18;
+uniform float wetness : hint_range(0.0, 1.0) = 0.5;
 
 group_uniforms Markings;
 // Lane dashes sit on the street lattice the blockout also uses.
@@ -84,31 +84,6 @@ float street_fbm(vec2 p) {
 	return v;
 }
 
-// Thin dark veins: take the distance to the nearest Voronoi edge.
-float crack_field(vec2 p) {
-	vec2 cell = floor(p);
-	vec2 local = fract(p);
-	float min_d = 10.0;
-	float second = 10.0;
-	for (int y = -1; y <= 1; y++) {
-		for (int x = -1; x <= 1; x++) {
-			vec2 neighbour = vec2(float(x), float(y));
-			vec2 point = neighbour + vec2(
-				street_hash(cell + neighbour),
-				street_hash(cell + neighbour + vec2(19.1, 3.7))
-			);
-			float d = length(local - point);
-			if (d < min_d) {
-				second = min_d;
-				min_d = d;
-			} else if (d < second) {
-				second = d;
-			}
-		}
-	}
-	return second - min_d;
-}
-
 float lane_paint(vec2 wp) {
 	// Cross of dashed lines at every street centreline. Street centres sit
 	// halfway between lot centres (stride away from each other).
@@ -136,23 +111,21 @@ void fragment() {
 
 	float grain = street_fbm(wp * asphalt_scale);
 	float patches = smoothstep(0.62, 0.88, street_fbm(wp * patch_scale + 3.1));
-	// Thin dark veins only — wide crack_width turns the Voronoi cells into a
-	// glowing honeycomb under wet specular, which fights the comic read.
-	float cracks = 1.0 - smoothstep(0.0, crack_width, crack_field(wp * crack_scale));
-	cracks = pow(cracks, 2.5);
-	float oil = smoothstep(0.72, 0.95, street_fbm(wp * oil_scale + 11.7)) * oil_amount;
+	// Soft wear streaks — fbm ridges, not Voronoi. Cellular patterns bloom into
+	// a glowing honeycomb under wet specular and fight the comic read.
+	float wear = smoothstep(0.55, 0.85, street_fbm(wp * wear_scale + 7.3)) * wear_amount;
+	float oil = smoothstep(0.75, 0.96, street_fbm(wp * oil_scale + 11.7)) * oil_amount;
 
-	vec3 base = mix(asphalt_color.rgb, patch_color.rgb, patches * 0.35);
-	base *= 0.82 + grain * 0.28;
-	base = mix(base, crack_color.rgb, cracks * 0.7);
+	vec3 base = mix(asphalt_color.rgb, patch_color.rgb, patches * 0.3);
+	base *= 0.78 + grain * 0.32;
+	base = mix(base, crack_color.rgb, wear * 0.55);
 	base = mix(base, oil_color.rgb, oil);
 
 	float paint = lane_paint(wp) * paint_strength;
 	base = mix(base, paint_color.rgb, paint);
 
-	// Oil and paint stay wetter; cracks drink the water and go matte.
-	float local_wet = clamp(wetness + oil * 0.35 - cracks * 0.4 + paint * 0.15, 0.0, 1.0);
-	v_local_rough = mix(0.72, roughness * 0.55, local_wet);
+	float local_wet = clamp(wetness + oil * 0.3 - wear * 0.25 + paint * 0.1, 0.0, 1.0);
+	v_local_rough = mix(0.75, roughness * 0.6, local_wet);
 
 	ALBEDO = base;
 	ROUGHNESS = v_local_rough;
