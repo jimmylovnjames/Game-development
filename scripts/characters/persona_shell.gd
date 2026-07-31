@@ -15,6 +15,9 @@ extends Interactable
 ## noir cost structure is not something to improvise.
 
 signal spoke(line: String)
+## Fired when this shell passes a knowledge item to anyone — the gossip
+## network writes it into circulation.
+signal knowledge_shared(item: KnowledgeItem, source: PersonaShell)
 
 @export var profile: PersonaProfile
 ## How warm the shell is to the courier right now. Quests and gifts move this.
@@ -26,6 +29,7 @@ var _flags: WorldFlags = null
 var _backend: NpcLlmBackend = null
 var _talk_count: int = 0
 var _consumed: Dictionary = {}  # KnowledgeItem.id -> true
+var _hearsay: Array[String] = []
 var _bark_label: Label3D = null
 var _bark_timer: float = 0.0
 var _bark_show_left: float = 0.0
@@ -116,6 +120,7 @@ func compose_lines() -> PackedStringArray:
 			_consumed[item.id] = true
 		if item.grants_flag != &"" and _flags != null:
 			_flags.set_flag(item.grants_flag, true)
+		knowledge_shared.emit(item, self)
 		return out
 
 	out.append(_deflect_line())
@@ -156,8 +161,14 @@ func answer_about(topic: StringName) -> Dictionary:
 			_consumed[item.id] = true
 		if item.grants_flag != &"" and _flags != null:
 			_flags.set_flag(item.grants_flag, true)
+		knowledge_shared.emit(item, self)
 		return {"text": item.text, "deflected": false}
 	return {"text": _deflect_line(), "deflected": true}
+
+
+## The gossip network's door in: a second-hand line enters the bark pool.
+func inject_hearsay(text: String) -> void:
+	_hearsay.append(text)
 
 
 func _deflect_line() -> String:
@@ -279,8 +290,9 @@ func _update_barks(delta: float) -> void:
 
 
 func _bark_line() -> String:
-	# Idle chatter leans on cheap knowledge (no flag gates), then greetings the
-	# courier never heard, then deflections as grumbles.
+	# Fresh hearsay beats stale small talk; it is consumed so it never repeats.
+	if not _hearsay.is_empty() and _rng.randf() < 0.65:
+		return _hearsay.pop_front()
 	var cheap: Array[KnowledgeItem] = []
 	for item in profile.knowledge:
 		if item.requires_flag == &"" and item.min_disposition <= 0.3 and not item.once_only:

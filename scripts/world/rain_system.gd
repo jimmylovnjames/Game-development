@@ -35,6 +35,7 @@ func _ready() -> void:
 	_splashes = _make_splashes()
 	add_child(_streaks)
 	add_child(_splashes)
+	add_to_group("rain_volume")
 	_apply_intensity()
 
 

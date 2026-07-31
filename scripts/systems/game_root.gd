@@ -20,6 +20,9 @@ var _flags: WorldFlags
 var _quests: QuestSystem
 var _dialogue: DialogueUI
 var _backend: NpcLlmBackend
+var _gossip: GossipNetwork
+var _ambience: AmbienceDirector
+var _comic_fx: ComicFX
 var _prompt_label: Label
 var _vex: NpcVex
 
@@ -33,10 +36,23 @@ func _ready() -> void:
 	_quests.name = "QuestSystem"
 	_quests.flags = _flags
 	add_child(_quests)
+	_quests.objective_completed.connect(_on_objective_completed)
 
 	_backend = NpcLlmBackend.new()
 	_backend.name = "NpcLlmBackend"
 	add_child(_backend)
+
+	_gossip = GossipNetwork.new()
+	_gossip.name = "GossipNetwork"
+	add_child(_gossip)
+
+	_ambience = AmbienceDirector.new()
+	_ambience.name = "AmbienceDirector"
+	add_child(_ambience)
+
+	_comic_fx = ComicFX.new()
+	_comic_fx.name = "ComicFX"
+	add_child(_comic_fx)
 
 	_dialogue = DIALOGUE_SCENE.instantiate() as DialogueUI
 	add_child(_dialogue)
@@ -66,6 +82,10 @@ func _ready() -> void:
 	_player.landed.connect(_on_landed)
 	_player.add_to_group("player")
 
+	var storm := get_node_or_null("StormDirector") as StormDirector
+	if storm != null:
+		storm.struck.connect(_on_storm_struck)
+
 	if print_boot_report:
 		call_deferred("_print_boot_report")
 
@@ -85,6 +105,7 @@ func _bind_persona_shells() -> void:
 	for shell in get_tree().get_nodes_in_group("persona_shells"):
 		if shell is PersonaShell:
 			shell.bind(_dialogue, _flags, _backend)
+			_gossip.register_shell(shell)
 
 
 func _print_boot_report() -> void:
@@ -160,3 +181,15 @@ func _on_interactable_changed(interactable: Node3D) -> void:
 func _on_landed(fall_speed: float) -> void:
 	if fall_speed > 12.0:
 		print("[GameRoot] hard landing at %.1f m/s" % fall_speed)
+		_comic_fx.burst("WHUMP", _player.global_position, "heavy")
+		_comic_fx.panel_flash(Color(1, 1, 1), 0.12, 0.12)
+
+
+func _on_storm_struck(strength: float) -> void:
+	var sky_position := _player.global_position + Vector3(0.0, 16.0, -14.0)
+	_comic_fx.burst(_comic_fx.pick_storm(), sky_position, "storm")
+	_comic_fx.panel_flash(Color(0.9, 0.95, 1.0), 0.1 + strength * 0.08, 0.2)
+
+
+func _on_objective_completed(_quest: Quest, _objective: QuestObjective) -> void:
+	_comic_fx.panel_flash(Color(1.0, 0.176, 0.584), 0.16, 0.22)

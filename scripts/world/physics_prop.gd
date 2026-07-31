@@ -30,6 +30,9 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 func _on_body_entered(_body: Node) -> void:
 	if _last_speed >= impact_speed_threshold:
 		impacted.emit(_last_speed)
+		var fx := get_tree().get_first_node_in_group("comic_fx") as ComicFX
+		if fx != null and _last_speed >= 5.0:
+			fx.burst(fx.pick_impact(_last_speed), global_position, "impact")
 
 
 ## Apply an impulse at a world-space point (or through the centre of mass when

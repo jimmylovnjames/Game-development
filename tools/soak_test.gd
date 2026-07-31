@@ -116,6 +116,18 @@ func _physics_process(_delta: float) -> bool:
 				_finish_talk()
 		9:
 			_finish_persona_checks()
+		10:
+			if _stage_frame == 2:
+				_begin_ambience_check()
+			if _stage_frame >= 130:
+				_finish_ambience_check()
+		11:
+			if _stage_frame == 2:
+				_begin_comic_fx_check()
+			if _stage_frame >= 130:
+				_finish_comic_fx_check()
+		12:
+			_finish_gossip_check()
 			_report()
 			return true
 	return false
@@ -350,6 +362,7 @@ func _finish_persona_checks() -> void:
 		_fail("LLM backend active without a configured key in CI")
 	else:
 		_ok("LLM backend offline by default (kernel is the voice)")
+	_next_stage()
 
 
 func _find_shell(persona_id: StringName) -> PersonaShell:
@@ -359,6 +372,93 @@ func _find_shell(persona_id: StringName) -> PersonaShell:
 				and persona.profile.persona_id == persona_id:
 			return persona
 	return null
+
+
+var _storm: StormDirector = null
+var _ambience: AmbienceDirector = null
+var _comic_fx: ComicFX = null
+var _burst_label: Label3D = null
+var _burst_spawned: bool = false
+
+
+func _begin_ambience_check() -> void:
+	print("[stage 10: ambience]")
+	_ambience = _scene.get_node_or_null("AmbienceDirector") as AmbienceDirector
+	_storm = _scene.get_node_or_null("StormDirector") as StormDirector
+	if _ambience == null or _storm == null:
+		_fail("AmbienceDirector or StormDirector missing")
+		return
+	var streams_ok := true
+	for player_name in ["Rain", "Drone", "Thunder"]:
+		var player := _ambience.get_node_or_null(player_name) as AudioStreamPlayer
+		if player == null or player.stream == null:
+			streams_ok = false
+	if streams_ok:
+		_ok("rain/drone/thunder streams generated")
+	else:
+		_fail("an ambience stream failed to generate")
+	_storm.force_strike(1.2)
+
+
+func _finish_ambience_check() -> void:
+	if _ambience == null:
+		return
+	if _ambience.thunder_plays >= 1:
+		_ok("thunder chased the forced lightning strike")
+	else:
+		_fail("thunder never followed the forced strike")
+	_next_stage()
+
+
+func _begin_comic_fx_check() -> void:
+	print("[stage 11: comic fx]")
+	_comic_fx = _scene.get_node_or_null("ComicFX") as ComicFX
+	if _comic_fx == null:
+		_fail("ComicFX missing from the scene")
+		return
+	_burst_label = _comic_fx.burst("THOK", Vector3(4.5, 1.6, -3.0), "impact")
+	_burst_spawned = _burst_label != null
+	_comic_fx.panel_flash(Color(1, 1, 1), 0.2, 0.1)
+
+
+func _finish_comic_fx_check() -> void:
+	if _comic_fx == null:
+		return
+	if not _burst_spawned:
+		_fail("burst() returned no label")
+	elif _burst_label != null and _burst_label.is_inside_tree():
+		# 130 frames at 60 Hz outlives lifetime + fade, so it should be gone.
+		_fail("onomatopoeia label outlived its panel")
+	else:
+		_ok("onomatopoeia bursts spawn, hold, and fade")
+	_next_stage()
+
+
+func _finish_gossip_check() -> void:
+	print("[stage 12: gossip]")
+	var gossip := _scene.get_node_or_null("GossipNetwork") as GossipNetwork
+	var marrow := _find_shell(&"marrow_scrap")
+	var amp := _find_shell(&"sister_amp")
+	var kip := _find_shell(&"kip_dockrat")
+	if gossip == null or marrow == null:
+		_fail("GossipNetwork or shells missing")
+		return
+
+	marrow.answer_about(&"syndicate")
+	var spread := gossip.force_spread_all()
+	if spread < 1:
+		_fail("nothing entered circulation after marrow talked")
+		return
+	var heard := ""
+	for shell: PersonaShell in [amp, kip, marrow]:
+		if shell == null or shell._hearsay.is_empty():
+			continue
+		heard = shell._hearsay[0]
+		break
+	if heard.is_empty():
+		_fail("hearsay never reached another persona")
+	else:
+		_ok("rumor traveled: \"%s\"" % heard.left(56))
 
 
 func _begin_jump() -> void:

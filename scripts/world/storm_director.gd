@@ -5,6 +5,9 @@ extends Node
 ## deck on its own schedule; the two do not need to agree — storms feel wrong
 ## when light and sky are frame-locked.
 
+## Fired once per strike, at the flash. AmbienceDirector turns it into thunder.
+signal struck(strength: float)
+
 @export var light_path: NodePath = "../Moonlight"
 ## Slot probability of a strike.
 @export_range(0.0, 1.0) var strike_chance: float = 0.14
@@ -38,6 +41,7 @@ func _process(delta: float) -> void:
 			_burst = 0.5 + 0.5 * _roll(slot * 7.31)
 			_burst_time = 0.0
 			strike_count += 1
+			struck.emit(_burst)
 
 	if _burst > 0.0:
 		_burst_time += delta
@@ -58,6 +62,14 @@ func _process(delta: float) -> void:
 			envelope = 0.0
 			_burst = 0.0
 		_light.light_energy = base_energy + strike_energy * envelope * _burst
+
+
+## Tests and cutscenes can force a strike instead of waiting for the sky.
+func force_strike(strength: float = 0.9) -> void:
+	_burst = clampf(strength, 0.1, 1.5)
+	_burst_time = 0.0
+	strike_count += 1
+	struck.emit(_burst)
 
 
 func _roll(seed: float) -> float:
