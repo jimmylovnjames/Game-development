@@ -96,20 +96,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		_capture_mouse(not _is_mouse_captured())
 
-	if event.is_action_pressed("interact") and _current_interactable != null:
-		interacted.emit(_current_interactable)
-		if _current_interactable.has_method("interact"):
-			_current_interactable.interact(self)
-
 	if event.is_action_pressed("toggle_flashlight"):
 		_flashlight.visible = not _flashlight.visible
 
 
 func _physics_process(delta: float) -> void:
-	# Jump is polled rather than read from _unhandled_input so that anything
-	# driving the character through Input.action_press() — automated tests,
-	# replays, scripted cutscenes, AI-controlled bodies — moves it identically
-	# to a human at the keyboard.
+	# Jump and interact are polled rather than read from _unhandled_input so that
+	# anything driving the character through Input.action_press() — automated
+	# tests, replays, scripted cutscenes, AI-controlled bodies — moves it
+	# identically to a human at the keyboard.
 	if Input.is_action_just_pressed("jump"):
 		_time_since_jump_pressed = 0.0
 	_time_since_jump_pressed += delta
@@ -130,6 +125,17 @@ func _physics_process(delta: float) -> void:
 	_push_rigid_bodies(delta, intent_speed)
 	_detect_landing()
 	_update_interactable()
+	_poll_interact()
+
+
+func _poll_interact() -> void:
+	if not Input.is_action_just_pressed("interact"):
+		return
+	if _current_interactable == null:
+		return
+	interacted.emit(_current_interactable)
+	if _current_interactable.has_method("interact"):
+		_current_interactable.interact(self)
 
 
 func _update_camera() -> void:
@@ -295,3 +301,10 @@ func get_camera() -> Camera3D:
 
 func get_current_interactable() -> Node3D:
 	return _current_interactable
+
+
+## Aim the camera. Used by soak tests and scripted look-ats.
+func set_look_angles(yaw: float, pitch: float) -> void:
+	_yaw = yaw
+	_pitch = clampf(pitch, deg_to_rad(min_pitch_deg), deg_to_rad(max_pitch_deg))
+	_update_camera()

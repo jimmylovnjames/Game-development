@@ -1,0 +1,37 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/characters/npc_vex.gd" id="1_vex"]
+[ext_resource type="Material" path="res://assets/materials/toon_player.tres" id="2_mat"]
+[ext_resource type="Material" path="res://assets/materials/neon_magenta.tres" id="3_neon"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
+radius = 0.38
+height = 1.7
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
+radius = 0.38
+height = 1.7
+
+[sub_resource type="BoxMesh" id="BoxMesh_badge"]
+size = Vector3(0.18, 0.28, 0.06)
+
+[node name="NpcVex" type="CharacterBody3D"]
+collision_layer = 24
+collision_mask = 1
+script = ExtResource("1_vex")
+interactable_id = &"npc_vex"
+prompt = "Talk to Vex"
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+shape = SubResource("CapsuleShape3D_body")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+mesh = SubResource("CapsuleMesh_body")
+surface_material_override/0 = ExtResource("2_mat")
+
+[node name="Badge" type="MeshInstance3D" parent="Mesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.25, -0.32)
+mesh = SubResource("BoxMesh_badge")
+surface_material_override/0 = ExtResource("3_neon")

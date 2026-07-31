@@ -220,6 +220,21 @@ func _check_main_scene() -> void:
 		else:
 			_fail("expected node missing: %s" % node_path)
 
+	# Systems are spawned at runtime by GameRoot._ready — check the scripts load.
+	for path: String in [
+		"res://scripts/world/interactable.gd",
+		"res://scripts/systems/world_flags.gd",
+		"res://scripts/systems/quest_system.gd",
+		"res://scripts/ui/dialogue_ui.gd",
+		"res://scripts/characters/npc_vex.gd",
+		"res://scenes/characters/npc_vex.tscn",
+		"res://scenes/ui/dialogue_ui.tscn",
+	]:
+		if load(path) == null:
+			_fail("failed to load %s" % path)
+		else:
+			_ok("loads: %s" % path.get_file())
+
 	var player := instance.get_node_or_null("Player")
 	if player != null and player.get_script() == null:
 		_fail("Player has no script attached")

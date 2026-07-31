@@ -19,6 +19,9 @@ const JUMP_FRAMES := 40
 const HELD_JUMP_FRAMES := 45
 const PROP_SETTLE_FRAMES := 150
 const PUSH_FRAMES := 80
+const TALK_AIM_FRAMES := 30
+const DIALOGUE_LINES := 5
+const DIALOGUE_ADVANCE_GAP := 8
 
 var _scene: Node = null
 var _player: CharacterBody3D = null
@@ -36,6 +39,9 @@ var _prop: RigidBody3D = null
 var _prop_start := Vector3.ZERO
 var _push_start := Vector3.ZERO
 var _player_push_start := Vector3.ZERO
+var _dialogue_advances: int = 0
+var _quests: QuestSystem = null
+var _dialogue: DialogueUI = null
 
 
 func _initialize() -> void:
@@ -51,6 +57,8 @@ func _initialize() -> void:
 		push_error("main scene has no Player node")
 		quit(1)
 		return
+	_quests = _scene.get_node_or_null("QuestSystem") as QuestSystem
+	_dialogue = _scene.get_node_or_null("DialogueUI") as DialogueUI
 	print("[soak] scene up, running stages...")
 
 
@@ -95,6 +103,17 @@ func _physics_process(_delta: float) -> bool:
 			Input.action_press("move_forward")
 			if _stage_frame >= PUSH_FRAMES:
 				_finish_push()
+		7:
+			if _stage_frame >= TALK_AIM_FRAMES:
+				_try_open_dialogue()
+		8:
+			if _stage_frame % DIALOGUE_ADVANCE_GAP == 0:
+				Input.action_press("interact")
+			elif _stage_frame % DIALOGUE_ADVANCE_GAP == 2:
+				Input.action_release("interact")
+				_dialogue_advances += 1
+			if _dialogue_advances >= DIALOGUE_LINES + 1:
+				_finish_talk()
 				_report()
 				return true
 	return false
@@ -231,6 +250,51 @@ func _finish_push() -> void:
 		_fail("player failed to advance through the crate (%.3f m)" % walked.length())
 	else:
 		_ok("player shoves rigid bodies (crate moved %.2f m)" % moved.length())
+
+	_begin_talk()
+	_next_stage()
+
+
+func _begin_talk() -> void:
+	Input.action_release("move_forward")
+	# Close enough that a short spring still puts Vex inside the interact ray.
+	if _player is PlayerController:
+		(_player as PlayerController).set_look_angles(0.0, -0.12)
+		(_player as PlayerController).camera_distance = 1.6
+	_player.global_position = Vector3(4.5, 0.1, -2.7)
+	_player.velocity = Vector3.ZERO
+	_dialogue_advances = 0
+
+
+func _try_open_dialogue() -> void:
+	print("[stage 7: talk to Vex]")
+	var target: Node3D = null
+	if _player.has_method("get_current_interactable"):
+		target = _player.get_current_interactable() as Node3D
+	if target == null:
+		_fail("InteractRay did not find NpcVex")
+		_next_stage()
+		_dialogue_advances = DIALOGUE_LINES + 1  # skip stage 8 waits
+		return
+	_ok("InteractRay locked onto %s" % target.name)
+	Input.action_press("interact")
+	_next_stage()
+	# Release on the next physics frame via stage 8's gap logic.
+
+
+func _finish_talk() -> void:
+	Input.action_release("interact")
+	print("[stage 8: dialogue]")
+	_quests = _scene.get_node_or_null("QuestSystem") as QuestSystem
+	_dialogue = _scene.get_node_or_null("DialogueUI") as DialogueUI
+	if _dialogue != null and _dialogue.is_active():
+		_fail("dialogue UI still open after advancing all lines")
+	elif _quests == null:
+		_fail("QuestSystem missing from the scene")
+	elif not _quests.is_objective_done(&"mq01_the_transit_pass", &"talk_to_vex"):
+		_fail("talk_to_vex objective was not completed")
+	else:
+		_ok("MQ01 talk_to_vex completed via dialogue")
 
 
 func _begin_jump() -> void:
