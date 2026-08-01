@@ -13,6 +13,10 @@ extends Resource
 @export var display_name: String = ""
 ## One-word archetype for authoring and debugging ("fixer", "preacher").
 @export var archetype: String = ""
+## Character rig archetype: fixer / vendor / preacher / urchin / warden.
+@export var rig_archetype: StringName = &"fixer"
+@export var rig_height: float = 1.8
+@export var rig_bulk: float = 1.0
 ## Name colour in dialogue and on the bark label.
 @export var name_color: Color = Color(0.0, 0.898, 1.0)
 ## Body tint so silhouettes stay distinct at blockout fidelity.

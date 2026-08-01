@@ -58,7 +58,7 @@ signal landed(fall_speed: float)
 @onready var _pivot: Node3D = $CameraPivot
 @onready var _spring_arm: SpringArm3D = $CameraPivot/SpringArm3D
 @onready var _camera: Camera3D = $CameraPivot/SpringArm3D/Camera3D
-@onready var _mesh: MeshInstance3D = $Mesh
+@onready var _mesh: Node3D = $Mesh
 @onready var _collision: CollisionShape3D = $Collision
 @onready var _interact_ray: RayCast3D = $CameraPivot/SpringArm3D/Camera3D/InteractRay
 @onready var _flashlight: SpotLight3D = $CameraPivot/Flashlight
@@ -80,6 +80,7 @@ func _ready() -> void:
 	floor_snap_length = snap_length
 	floor_max_angle = deg_to_rad(max_slope_deg)
 	_yaw = rotation.y
+	_mesh.add_child(CharacterBuilder.build(&"courier", 1.78, 1.0))
 	_capture_mouse(true)
 
 

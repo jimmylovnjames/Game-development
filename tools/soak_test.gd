@@ -128,8 +128,13 @@ func _physics_process(_delta: float) -> bool:
 				_finish_comic_fx_check()
 		12:
 			_finish_gossip_check()
-			_report()
-			return true
+		13:
+			if _stage_frame == 2:
+				_begin_rig_check()
+			if _stage_frame >= 95:
+				_finish_rig_check()
+				_report()
+				return true
 	return false
 
 
@@ -459,6 +464,58 @@ func _finish_gossip_check() -> void:
 		_fail("hearsay never reached another persona")
 	else:
 		_ok("rumor traveled: \"%s\"" % heard.left(56))
+	_next_stage()
+
+
+var _rig_marrow: PersonaShell = null
+var _rig_marrow_start_yaw: float = 0.0
+
+
+func _begin_rig_check() -> void:
+	print("[stage 13: character rigs]")
+	var rig_failures := 0
+	for entry: Dictionary in [
+		{"name": "player", "rig": _player.get_node_or_null("Mesh/Rig")},
+		{"name": "vex", "rig": (_scene.get_node_or_null("World/NpcVex") as NpcVex).get_rig()},
+		{"name": "marrow", "rig": _find_shell(&"marrow_scrap").get_rig()},
+		{"name": "amp", "rig": _find_shell(&"sister_amp").get_rig()},
+		{"name": "kip", "rig": _find_shell(&"kip_dockrat").get_rig()},
+		{"name": "bram", "rig": _find_shell(&"warden_bram").get_rig()},
+	]:
+		var rig: Node3D = entry["rig"]
+		if rig == null:
+			_fail("%s has no character rig" % entry["name"])
+			rig_failures += 1
+			continue
+		var head := rig.get_node_or_null("Head")
+		if head == null:
+			_fail("%s rig has no head" % entry["name"])
+			rig_failures += 1
+		elif rig.get_child_count() < 12:
+			_fail("%s rig is too simple (%d parts)" % [entry["name"], rig.get_child_count()])
+			rig_failures += 1
+	if rig_failures == 0:
+		_ok("six rigs assembled with heads, eyes, and costume parts")
+
+	# Put the courier in front of Marrow and give the shell time to turn.
+	_rig_marrow = _find_shell(&"marrow_scrap")
+	if _rig_marrow != null:
+		_rig_marrow_start_yaw = _rig_marrow.rotation.y
+		_player.global_position = Vector3(7.5, 0.1, 6.5)
+		_player.velocity = Vector3.ZERO
+
+
+func _finish_rig_check() -> void:
+	if _rig_marrow == null:
+		return
+	var target_yaw := CharacterBuilder.yaw_toward(
+		_rig_marrow.global_position, _player.global_position
+	)
+	var diff := absf(wrapf(_rig_marrow.rotation.y - target_yaw, -PI, PI))
+	if diff > 0.5:
+		_fail("marrow never turned to face the courier (off by %.2f rad)" % diff)
+	else:
+		_ok("shells turn to face the courier (%.2f rad off target)" % diff)
 
 
 func _begin_jump() -> void:

@@ -759,11 +759,12 @@ func _spawn_colossus() -> void:
 	panel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	holder.add_child(panel)
 
-	# The face must light its own tower or it reads as a sticker.
+	# The face must light its own tower or it reads as a sticker — but a range
+	# that reaches the plaza floor turns every character magenta.
 	var light := OmniLight3D.new()
 	light.light_color = Color(0.0, 0.898, 1.0)
-	light.light_energy = 2.4
-	light.omni_range = 38.0
+	light.light_energy = 1.5
+	light.omni_range = 24.0
 	light.shadow_enabled = false
 	light.position = Vector3(0.0, 0.0, 3.0)
 	holder.add_child(light)

@@ -1,24 +1,10 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/characters/persona_shell.gd" id="1_shell"]
-[ext_resource type="Material" path="res://assets/materials/toon_player.tres" id="2_mat"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.38
 height = 1.7
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
-radius = 0.38
-height = 1.7
-
-[sub_resource type="SphereMesh" id="SphereMesh_head"]
-radius = 0.19
-height = 0.38
-radial_segments = 10
-rings = 8
-
-[sub_resource type="BoxMesh" id="BoxMesh_visor"]
-size = Vector3(0.3, 0.07, 0.06)
 
 [node name="PersonaShell" type="CharacterBody3D"]
 collision_layer = 24
@@ -28,20 +14,6 @@ script = ExtResource("1_shell")
 [node name="Collision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
 shape = SubResource("CapsuleShape3D_body")
-
-[node name="Mesh" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
-mesh = SubResource("CapsuleMesh_body")
-surface_material_override/0 = ExtResource("2_mat")
-
-[node name="Head" type="MeshInstance3D" parent="Mesh"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.98, 0)
-mesh = SubResource("SphereMesh_head")
-surface_material_override/0 = ExtResource("2_mat")
-
-[node name="Visor" type="MeshInstance3D" parent="Mesh/Head"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.16)
-mesh = SubResource("BoxMesh_visor")
 
 [node name="BarkLabel" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.15, 0)

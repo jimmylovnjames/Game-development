@@ -2,9 +2,9 @@ class_name NpcVex
 extends Interactable
 ## Vex — lowspine fixer who clears debts she did not owe. First beat of MQ01.
 ##
-## She is a CharacterBody3D so she stands on the street like anything that
-## walks; interaction lives on this same node (layer 5). Dialogue content stays
-## here as data until a real dialogue resource format lands.
+## Quest dialogue stays fully authored here; the noir cost structure is not
+## something to improvise. Her body is a CharacterBuilder "fixer" rig like
+## every other person in the district.
 
 const DISPLAY_NAME := "Vex"
 
@@ -16,12 +16,13 @@ var _lines := PackedStringArray([
 	"Take it. Or don't. Either way, somebody owns a piece of your morning.",
 ])
 
-@onready var _mesh: MeshInstance3D = $Mesh
-
 var _dialogue: DialogueUI
 var _quests: QuestSystem
 var _talked: bool = false
 var _cooldown: float = 0.0
+var _rig: Node3D = null
+var _idle_time: float = 0.0
+var _look_target: Node3D = null
 
 
 func _ready() -> void:
@@ -30,11 +31,32 @@ func _ready() -> void:
 	prompt = "Talk to Vex"
 	collision_layer = 8 | 16  # npc | interactable
 	collision_mask = 1  # world
+	_rig = CharacterBuilder.build(&"fixer", 1.82, 1.0)
+	add_child(_rig)
+	_idle_time = 4.2
 
 
 func bind(dialogue: DialogueUI, quests: QuestSystem) -> void:
 	_dialogue = dialogue
 	_quests = quests
+
+
+func _process(delta: float) -> void:
+	if _cooldown > 0.0:
+		_cooldown = maxf(0.0, _cooldown - delta)
+	_idle_time += delta
+	CharacterBuilder.apply_idle(_rig, _idle_time, 0.6)
+
+	if _look_target == null or not is_instance_valid(_look_target):
+		_look_target = get_tree().get_first_node_in_group("player") as Node3D
+		return
+	if _dialogue != null and _dialogue.is_active():
+		return
+	var dist := global_position.distance_to(_look_target.global_position)
+	if dist > 7.0:
+		return
+	var want := CharacterBuilder.yaw_toward(global_position, _look_target.global_position)
+	rotation.y = lerp_angle(rotation.y, want, minf(2.8 * delta, 1.0))
 
 
 func _on_interact(_who: Node3D) -> void:
@@ -71,6 +93,6 @@ func _on_dialogue_cancelled(speaker_id: StringName) -> void:
 	print("[Vex] you walk away mid-sentence. she does not follow.")
 
 
-func _process(delta: float) -> void:
-	if _cooldown > 0.0:
-		_cooldown = maxf(0.0, _cooldown - delta)
+## Exposed for soak tests: the built rig root.
+func get_rig() -> Node3D:
+	return _rig

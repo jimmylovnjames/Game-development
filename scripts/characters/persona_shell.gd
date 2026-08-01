@@ -34,6 +34,9 @@ var _bark_label: Label3D = null
 var _bark_timer: float = 0.0
 var _bark_show_left: float = 0.0
 var _llm_pending: bool = false
+var _rig: Node3D = null
+var _idle_time: float = 0.0
+var _look_target: Node3D = null
 
 
 func _ready() -> void:
@@ -49,26 +52,29 @@ func _ready() -> void:
 	# Deterministic voice per persona per world seed.
 	_rng.seed = hash(String(profile.persona_id)) + 20771113
 	_bark_timer = _rng.randf_range(2.0, profile.bark_interval)
+	_idle_time = _rng.randf_range(0.0, 10.0)
+	_build_rig()
 	_bark_label = get_node_or_null("BarkLabel") as Label3D
 	if _bark_label != null:
 		_bark_label.visible = false
 		_bark_label.modulate = profile.name_color
-	_apply_tint()
+		_bark_label.position.y = profile.rig_height + 0.45
 
 
-func _apply_tint() -> void:
-	var mesh := get_node_or_null("Mesh") as MeshInstance3D
-	if mesh == null or profile == null:
-		return
-	var material := mesh.get_surface_override_material(0) as ShaderMaterial
-	if material == null:
-		material = mesh.get_active_material(0) as ShaderMaterial
-	if material == null:
-		return
-	material = material.duplicate() as ShaderMaterial
-	material.set_shader_parameter("albedo_color", profile.body_tint)
-	material.set_shader_parameter("rim_color", profile.name_color)
-	mesh.set_surface_override_material(0, material)
+func _build_rig() -> void:
+	# Palette comes from the archetype defaults unless the profile overrides it.
+	var palette := PackedColorArray()
+	if profile.body_tint != Color(0.16, 0.18, 0.26):
+		palette = CharacterBuilder.PALETTES.get(
+			profile.rig_archetype, CharacterBuilder.PALETTES[&"fixer"]
+		).duplicate()
+		palette[0] = profile.body_tint
+		palette[1] = profile.name_color
+		palette[3] = profile.name_color
+	_rig = CharacterBuilder.build(
+		profile.rig_archetype, profile.rig_height, profile.rig_bulk, palette
+	)
+	add_child(_rig)
 
 
 func bind(dialogue: DialogueUI, flags: WorldFlags, backend: NpcLlmBackend) -> void:
@@ -80,7 +86,24 @@ func bind(dialogue: DialogueUI, flags: WorldFlags, backend: NpcLlmBackend) -> vo
 func _process(delta: float) -> void:
 	if profile == null:
 		return
+	_idle_time += delta
+	CharacterBuilder.apply_idle(_rig, _idle_time, 0.8)
+	_update_facing(delta)
 	_update_barks(delta)
+
+
+## Turn to face the courier when they are close and nobody is mid-sentence.
+func _update_facing(delta: float) -> void:
+	if _look_target == null or not is_instance_valid(_look_target):
+		_look_target = get_tree().get_first_node_in_group("player") as Node3D
+		return
+	if _dialogue != null and _dialogue.is_active():
+		return
+	var dist := global_position.distance_to(_look_target.global_position)
+	if dist > 6.5:
+		return
+	var want := CharacterBuilder.yaw_toward(global_position, _look_target.global_position)
+	rotation.y = lerp_angle(rotation.y, want, minf(3.2 * delta, 1.0))
 
 
 func _on_interact(who: Node3D) -> void:
@@ -308,3 +331,8 @@ func _hide_bark() -> void:
 	_bark_show_left = 0.0
 	if _bark_label != null:
 		_bark_label.visible = false
+
+
+## Exposed for soak tests: the built rig root.
+func get_rig() -> Node3D:
+	return _rig
