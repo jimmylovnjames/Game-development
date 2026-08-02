@@ -87,6 +87,26 @@ plane. Ground materials want `spec_softness ≈ 0.4` (a soft ramp) and a low
 
 ---
 
+### Light ramps
+
+`toon_cel` can take an authored 1D ramp instead of the numeric banding: set
+`use_light_ramp` and assign one from `assets/materials/ramps/`. The wrapped
+N·L indexes the ramp, its brightness drives the band and its hue tints the lit
+term.
+
+Use a ramp when you want the terminator to **change colour**, not just step —
+cold violet shadow drifting into a warm key is a hue shift across the bands
+that `light_bands` + `band_softness` cannot express at any setting. Character
+rigs use `ramp_character.tres` (three bands) for exactly this; bulk
+architecture can take `ramp_architecture.tres` (two bands) or stay analytic.
+
+Author ramps with **constant** gradient interpolation — linear interpolation
+gives you a smooth gradient wearing a ramp's clothes. Keep the lit end off
+white for the same reason emissive panels stay at energy 2–3: a band at 1.0
+tonemaps flat and throws away the colour the ramp was for.
+
+---
+
 ## 3. Ink outlines
 
 `shaders/outline_hull.gdshader`, applied as `next_pass` on a toon material —

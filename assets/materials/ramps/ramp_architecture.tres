@@ -1,0 +1,14 @@
+[gd_resource type="GradientTexture1D" load_steps=2 format=3]
+
+; Two-band ramp for bulk architecture and ground. Fewer steps, and the lit band
+; stops well short of white so a moonlit wall never blows out to paper.
+
+[sub_resource type="Gradient" id="Gradient_architecture"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.55)
+colors = PackedColorArray(0.2, 0.17, 0.36, 1, 0.78, 0.79, 0.86, 1)
+
+[resource]
+resource_name = "ramp_architecture"
+gradient = SubResource("Gradient_architecture")
+width = 64

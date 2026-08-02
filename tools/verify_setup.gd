@@ -175,9 +175,52 @@ func _check_shaders() -> void:
 		if shader == null:
 			_fail("%s failed to load" % path)
 			continue
-		# get_shader_uniform_list() forces the parser to run over the source.
-		shader.get_shader_uniform_list()
-		_ok("%s compiled" % path)
+
+		# get_shader_uniform_list() runs the parser, but a shader that fails
+		# partway still returns every uniform it read *before* the error — so
+		# calling that "compiled" passes broken shaders. Compare the count the
+		# API reports against the count actually declared in the source: a
+		# parse that died early comes back short.
+		var declared := _count_declared_uniforms(shader.code)
+		var reported := shader.get_shader_uniform_list().size()
+		if reported < declared:
+			_fail("%s: parser reported %d of %d uniforms — it stopped early, so the shader did not compile" % [
+				path, reported, declared,
+			])
+		else:
+			_ok("%s compiled (%d uniforms)" % [path, reported])
+
+
+## Top-level `uniform` declarations in shader source, ignoring commented-out
+## lines and the built-in texture bindings.
+##
+## Samplers hinted as screen / depth / normal-roughness are wired by the
+## renderer, not exposed as material parameters, so they never appear in
+## get_shader_uniform_list() — counting them makes every post-process shader
+## look like it stopped parsing one uniform early.
+##
+## Deliberately conservative: only lines that *begin* a declaration count, so
+## this can undercount a multi-line declaration but never overcount.
+const BUILTIN_TEXTURE_HINTS := [
+	"hint_screen_texture", "hint_depth_texture", "hint_normal_roughness_texture",
+]
+
+
+func _count_declared_uniforms(code: String) -> int:
+	var count := 0
+	for raw_line: String in code.split("\n"):
+		var line := raw_line.strip_edges()
+		if line.begins_with("//") or not line.begins_with("uniform"):
+			continue
+		var builtin := false
+		for hint: String in BUILTIN_TEXTURE_HINTS:
+			if line.contains(hint):
+				builtin = true
+				break
+		if builtin:
+			continue
+		count += 1
+	return count
 
 
 func _check_main_scene() -> void:

@@ -12,6 +12,10 @@ extends RefCounted
 const TOON := preload("res://shaders/toon_cel.gdshader")
 const NEON := preload("res://shaders/neon_sign.gdshader")
 const INK := preload("res://assets/materials/outline_ink.tres")
+## Authored 3-band light ramp. Characters get the ramp rather than the numeric
+## banding so the shadow end can drift cold violet and the lit end warm — a hue
+## shift across the terminator that a band count cannot express.
+const LIGHT_RAMP := preload("res://assets/materials/ramps/ramp_character.tres")
 
 ## archetype -> feature flags the assembler reads
 const FEATURES := {
@@ -241,6 +245,8 @@ static func _toon(color: Color, rim: Color, roughness: float) -> ShaderMaterial:
 	mat.set_shader_parameter("rim_strength", 0.75)
 	mat.set_shader_parameter("rim_light_bias", 0.55)
 	mat.set_shader_parameter("shadow_tint_strength", 0.6)
+	mat.set_shader_parameter("light_ramp", LIGHT_RAMP)
+	mat.set_shader_parameter("use_light_ramp", true)
 	return mat
 
 

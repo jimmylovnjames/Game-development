@@ -27,6 +27,15 @@ uniform float shadow_wrap : hint_range(0.0, 1.0) = 0.35;
 uniform vec4 shadow_tint : source_color = vec4(0.24, 0.18, 0.42, 1.0);
 uniform float shadow_tint_strength : hint_range(0.0, 1.0) = 0.5;
 
+group_uniforms Ramp;
+// Optional 1D light ramp sampled by the wrapped N-dot-L, replacing the analytic
+// banding. A ramp is authorable — an artist sets where the steps fall and what
+// colour each band is — and it can carry a hue shift across the terminator
+// (cold violet shadow into a warm key) that a numeric band count cannot express
+// at all. See assets/materials/ramps/.
+uniform sampler2D light_ramp : source_color, filter_linear, hint_default_white;
+uniform bool use_light_ramp = false;
+
 group_uniforms Specular;
 uniform float spec_threshold : hint_range(0.0, 1.0) = 0.55;
 uniform float spec_softness : hint_range(0.001, 0.3) = 0.02;
@@ -85,10 +94,24 @@ void light() {
 	vec3 l = normalize(LIGHT);
 
 	float wrapped = cel_wrap_ndotl(n, l, shadow_wrap);
-	float banded = cel_band(wrapped, light_bands, band_softness);
+
+	float banded;
+	vec3 ramp_tint = vec3(1.0);
+	if (use_light_ramp) {
+		// Clamp off the very edges: a linear-filtered 1D texture bleeds the
+		// clamp colour into the first and last texel otherwise, which shows up
+		// as a thin wrong-coloured rim exactly on the terminator.
+		vec3 ramp = texture(light_ramp, vec2(clamp(wrapped, 0.01, 0.99), 0.5)).rgb;
+		// Split the ramp into brightness (drives the band) and hue (tints the
+		// lit term), so one texture carries both the steps and the colour.
+		banded = max(max(ramp.r, ramp.g), ramp.b);
+		ramp_tint = banded > 0.0001 ? ramp / banded : vec3(1.0);
+	} else {
+		banded = cel_band(wrapped, light_bands, band_softness);
+	}
 	float shaded = banded * ATTENUATION;
 
-	vec3 lit = LIGHT_COLOR * ALBEDO * shaded;
+	vec3 lit = LIGHT_COLOR * ALBEDO * ramp_tint * shaded;
 
 	// Tint the unlit facing toward this light's colour rather than adding a flat
 	// ambient term, so a magenta sign throws magenta shadow and a cyan one cyan.
