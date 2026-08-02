@@ -18,6 +18,9 @@ extends SceneTree
 ##   --hud=0           hide the debug overlay
 ##   --fog=0           disable both fog passes (isolate the shading)
 ##   --glow=0          disable the glow pass
+##   --rain=0          hide the rain volume
+##   --postfx=0        hide the post-process layer
+##   --burst=WORD      letter a comic word over the plaza (held for the shot)
 ##   --exposure=F      multiply tonemap exposure
 
 var _out_path := "user://screenshot.png"
@@ -31,6 +34,9 @@ var _distance := 7.0
 var _show_hud := true
 var _fog := true
 var _glow := true
+var _rain := true
+var _postfx := true
+var _burst_word := ""
 var _exposure := -1.0
 
 var _frames := 0
@@ -71,6 +77,9 @@ func _parse_args() -> void:
 			"hud": _show_hud = value != "0"
 			"fog": _fog = value != "0"
 			"glow": _glow = value != "0"
+			"rain": _rain = value != "0"
+			"postfx": _postfx = value != "0"
+			"burst": _burst_word = value
 			"exposure": _exposure = float(value)
 
 
@@ -86,6 +95,14 @@ func _setup_shot() -> void:
 	var hud := _scene.get_node_or_null("DebugHUD") as CanvasLayer
 	if hud != null:
 		hud.visible = _show_hud
+
+	var rain := _scene.get_node_or_null("World/Rain")
+	if rain != null:
+		rain.visible = _rain
+
+	var postfx := _scene.get_node_or_null("PostFX") as CanvasLayer
+	if postfx != null:
+		postfx.visible = _postfx
 
 	_apply_environment_overrides()
 
@@ -144,6 +161,10 @@ func _use_player_camera() -> void:
 
 func _process(_delta: float) -> bool:
 	_frames += 1
+	if _frames == _warmup - 2 and not _burst_word.is_empty():
+		var fx := _scene.get_node_or_null("ComicFX") as ComicFX
+		if fx != null:
+			fx.burst(_burst_word, Vector3(0.0, 4.5, -6.0), "storm", 120.0)
 	if _frames < _warmup:
 		return false
 

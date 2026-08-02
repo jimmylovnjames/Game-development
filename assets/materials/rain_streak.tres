@@ -1,0 +1,10 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/rain_streak.gdshader" id="1_streak"]
+
+[resource]
+resource_name = "rain_streak"
+render_priority = 0
+shader = ExtResource("1_streak")
+shader_parameter/streak_color = Color(0.5, 0.6, 0.8, 0.5)
+shader_parameter/tip_fade = 0.5

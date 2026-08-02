@@ -12,6 +12,7 @@ extends SceneTree
 func _initialize() -> void:
 	_setup_input_map()
 	_setup_physics_layers()
+	_setup_physics_engine()
 	_setup_rendering()
 	_setup_application()
 
@@ -98,6 +99,18 @@ func _setup_physics_layers() -> void:
 			"layer_names/3d_physics/layer_%d" % index, PHYSICS_LAYERS[index]
 		)
 	print("Named %d 3D physics layers." % PHYSICS_LAYERS.size())
+
+
+## Jolt over the stock Godot solver: better rigid-body stacking, built-in
+## continuous collision detection (fast props stop tunnelling through the
+## street), and enhanced internal edge removal so the character controller
+## glides over seams between colliders instead of catching them.
+func _setup_physics_engine() -> void:
+	ProjectSettings.set_setting("physics/3d/physics_engine", "Jolt Physics")
+	ProjectSettings.set_setting("physics/common/physics_ticks_per_second", 60)
+	ProjectSettings.set_setting("physics/common/max_physics_steps_per_frame", 8)
+	ProjectSettings.set_setting("physics/3d/default_gravity", 9.8)
+	print("Configured physics engine: Jolt @ 60 Hz.")
 
 
 func _setup_rendering() -> void:

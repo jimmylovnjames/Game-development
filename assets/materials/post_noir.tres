@@ -1,0 +1,22 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/post_noir.gdshader" id="1_post"]
+
+[resource]
+resource_name = "post_noir"
+render_priority = 0
+shader = ExtResource("1_post")
+shader_parameter/aberration = 0.55
+shader_parameter/posterize_levels = 14.0
+shader_parameter/posterize_strength = 0.32
+shader_parameter/vibrance = 0.4
+shader_parameter/halftone_strength = 0.16
+shader_parameter/halftone_cell_px = 7.0
+shader_parameter/halftone_shadow_cutoff = 0.42
+shader_parameter/hatch_strength = 0.4
+shader_parameter/hatch_cell_px = 10.0
+shader_parameter/hatch_lum = 0.3
+shader_parameter/grain_strength = 0.055
+shader_parameter/grain_fps = 24.0
+shader_parameter/vignette_strength = 0.42
+shader_parameter/vignette_start = 0.35

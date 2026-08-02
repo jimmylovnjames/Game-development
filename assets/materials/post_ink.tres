@@ -1,0 +1,13 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/post_ink.gdshader" id="1_ink"]
+
+[resource]
+resource_name = "post_ink"
+render_priority = 0
+shader = ExtResource("1_ink")
+shader_parameter/ink_color = Color(0.03, 0.02, 0.06, 1)
+shader_parameter/ink_strength = 0.75
+shader_parameter/edge_threshold = 0.18
+shader_parameter/line_thickness = 1.0
+shader_parameter/bright_cut = 1.6

@@ -34,10 +34,14 @@ godot --path . --headless --quit-after 300
 Three headless checks, none of which need a display:
 
 ```bash
-godot --headless --path . --script tools/verify_setup.gd  # input map, shaders, scene, addons, quests
-godot --headless --path . --script tools/soak_test.gd     # physics settle, walk, jump
+godot --headless --path . --script tools/verify_setup.gd  # input map, physics, shaders, materials, props, scene, addons, quests
+godot --headless --path . --script tools/soak_test.gd     # settle, walk, tap vs held jump, prop drop, crate push
 python3 tools/verify_mcp.py                               # MCP servers in .mcp.json
 ```
+
+Physics runs on **Jolt** (`physics/3d/physics_engine`), switched via
+`tools/setup_project_settings.gd` — better rigid-body stacking, continuous
+collision detection, and seam-free character movement.
 
 `verify_setup.gd` picks up new shaders and quest resources automatically. New
 gameplay systems should get a stage in `soak_test.gd`.
@@ -56,7 +60,8 @@ xvfb-run -a -s "-screen 0 1280x720x24" \
 ```
 
 Useful flags: `--cam/--look` (detached camera), `--fog=0`, `--glow=0`,
-`--exposure=`, `--hud=0`. Full list in the script header.
+`--rain=0`, `--postfx=0`, `--exposure=`, `--hud=0`. Full list in the script
+header.
 
 ## MCP servers
 
@@ -92,7 +97,8 @@ See CLAUDE.md § "MCP usage rules" for which server to reach for.
 ```
 scenes/     main.tscn + world/ player/ ui/ props/ characters/
 scripts/    player/ world/ quests/ systems/ ai/ ui/ util/
-shaders/    toon_cel · outline_hull · neon_sign + include/
+shaders/    toon_cel · outline_hull · neon_sign · puddle · hologram ·
+            post_noir · rain_streak · rain_splash + include/
 worlds/     chunks/ biomes/ data/     — procedural streaming
 quests/     main/ side/ resources/    — quest .tres data
 assets/     models/ textures/ audio/ fonts/ materials/

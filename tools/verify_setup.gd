@@ -12,7 +12,10 @@ var _failures: int = 0
 
 func _initialize() -> void:
 	_check_input_map()
+	_check_physics()
 	_check_shaders()
+	_check_materials()
+	_check_prop_scenes()
 	_check_main_scene()
 	_check_addons()
 	_check_quests()
@@ -74,6 +77,92 @@ func _check_input_map() -> void:
 			_fail("action '%s' exists but does not match its mouse event" % action)
 
 
+## The physics engine settings are load-bearing for every test that follows:
+## gravity feeds the controller, Jolt feeds the props, and the layer names are
+## the contract every collision mask is written against.
+func _check_physics() -> void:
+	print("[physics]")
+
+	var engine: String = ProjectSettings.get_setting("physics/3d/physics_engine", "")
+	if engine == "Jolt Physics":
+		_ok("physics engine is Jolt Physics")
+	else:
+		_fail("physics/3d/physics_engine is '%s', expected 'Jolt Physics'" % engine)
+
+	var ticks: int = ProjectSettings.get_setting("physics/common/physics_ticks_per_second", 0)
+	if ticks == 60:
+		_ok("physics runs at 60 Hz")
+	else:
+		_fail("physics/common/physics_ticks_per_second is %d, expected 60" % ticks)
+
+	var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 0.0)
+	if is_equal_approx(gravity, 9.8):
+		_ok("default gravity is 9.8")
+	else:
+		_fail("physics/3d/default_gravity is %.2f, expected 9.8" % gravity)
+
+	for index in range(1, 11):
+		var layer_name: String = ProjectSettings.get_setting(
+			"layer_names/3d_physics/layer_%d" % index, ""
+		)
+		if layer_name.is_empty():
+			_fail("3d physics layer %d has no name" % index)
+		else:
+			_ok("layer %d is named '%s'" % [index, layer_name])
+
+
+func _check_materials() -> void:
+	print("[materials]")
+	var paths := _list_files("res://assets/materials", ".tres")
+	if paths.is_empty():
+		_fail("no materials found under res://assets/materials")
+		return
+	for path: String in paths:
+		var resource := load(path)
+		if resource == null:
+			_fail("%s failed to load" % path)
+			continue
+		if resource is ShaderMaterial and resource.shader == null:
+			_fail("%s is a ShaderMaterial with no shader" % path)
+			continue
+		_ok("%s loads (%s)" % [path.get_file(), resource.get_class()])
+
+
+func _check_prop_scenes() -> void:
+	print("[prop scenes]")
+	for path: String in [
+		"res://scenes/props/physics_crate.tscn",
+		"res://scenes/props/physics_can.tscn",
+		"res://scenes/props/dumpster.tscn",
+		"res://scenes/props/jersey_barrier.tscn",
+		"res://scenes/props/bollard.tscn",
+		"res://scenes/props/traffic_cone.tscn",
+		"res://scenes/props/manhole.tscn",
+		"res://scenes/props/scaffold_frame.tscn",
+	]:
+		var packed := load(path) as PackedScene
+		if packed == null:
+			_fail("%s failed to load" % path)
+			continue
+		var instance := packed.instantiate()
+		if instance == null:
+			_fail("%s failed to instantiate" % path)
+			continue
+		var body := instance as RigidBody3D
+		if body != null:
+			if not instance.is_in_group("physics_props"):
+				_fail("%s is not in group 'physics_props'" % path)
+			elif instance.get_script() == null:
+				_fail("%s has no script attached" % path)
+			elif body.physics_material_override == null:
+				_fail("%s has no physics_material_override" % path)
+			else:
+				_ok("%s: RigidBody3D, %.1f kg" % [path.get_file(), body.mass])
+		else:
+			_ok("%s: %s" % [path.get_file(), instance.get_class()])
+		instance.free()
+
+
 func _check_shaders() -> void:
 	print("[shaders]")
 	var paths := _list_files("res://shaders", ".gdshader")
@@ -121,14 +210,30 @@ func _check_main_scene() -> void:
 
 	for node_path: String in [
 		"WorldEnvironment", "Moonlight", "World/Ground", "World/Blockout",
+		"World/Rain",
 		"Player", "Player/CameraPivot/SpringArm3D/Camera3D",
 		"Player/CameraPivot/SpringArm3D/Camera3D/InteractRay",
-		"DebugHUD/DebugLabel",
+		"PostFX/NoirRect", "DebugHUD/DebugLabel",
 	]:
 		if instance.has_node(node_path):
 			_ok("node present: %s" % node_path)
 		else:
 			_fail("expected node missing: %s" % node_path)
+
+	# Systems are spawned at runtime by GameRoot._ready — check the scripts load.
+	for path: String in [
+		"res://scripts/world/interactable.gd",
+		"res://scripts/systems/world_flags.gd",
+		"res://scripts/systems/quest_system.gd",
+		"res://scripts/ui/dialogue_ui.gd",
+		"res://scripts/characters/npc_vex.gd",
+		"res://scenes/characters/npc_vex.tscn",
+		"res://scenes/ui/dialogue_ui.tscn",
+	]:
+		if load(path) == null:
+			_fail("failed to load %s" % path)
+		else:
+			_ok("loads: %s" % path.get_file())
 
 	var player := instance.get_node_or_null("Player")
 	if player != null and player.get_script() == null:

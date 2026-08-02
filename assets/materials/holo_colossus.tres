@@ -1,0 +1,22 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/holo_colossus.gdshader" id="1_colossus"]
+
+[resource]
+resource_name = "holo_colossus"
+render_priority = 0
+shader = ExtResource("1_colossus")
+shader_parameter/holo_color = Color(0.0, 0.898, 1.0, 1)
+shader_parameter/accent_color = Color(1.0, 0.176, 0.584, 1)
+shader_parameter/energy = 2.0
+shader_parameter/phase_offset = 0.0
+shader_parameter/eye_spacing = Vector2(0.19, 0.14)
+shader_parameter/eye_radius = 0.062
+shader_parameter/gaze_speed = 0.08
+shader_parameter/blink_seconds = 0.16
+shader_parameter/mouth_curve = 0.035
+shader_parameter/scanline_density = 64.0
+shader_parameter/scanline_speed = 0.4
+shader_parameter/glitch_rate = 2.5
+shader_parameter/glitch_chance = 0.16
+shader_parameter/glitch_strength = 0.05

@@ -1,0 +1,54 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Material" path="res://assets/materials/toon_metal_dark.tres" id="1_metal"]
+[ext_resource type="Material" path="res://assets/materials/toon_rust.tres" id="2_rust"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_body"]
+size = Vector3(1.6, 1.35, 0.95)
+
+[sub_resource type="BoxMesh" id="BoxMesh_body"]
+size = Vector3(1.6, 1.2, 0.95)
+
+[sub_resource type="BoxMesh" id="BoxMesh_lid"]
+size = Vector3(1.62, 0.12, 0.98)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wheel"]
+size = Vector3(0.12, 0.22, 0.12)
+
+[node name="Dumpster" type="StaticBody3D"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.675, 0)
+shape = SubResource("BoxShape3D_body")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("BoxMesh_body")
+surface_material_override/0 = ExtResource("2_rust")
+
+[node name="Lid" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.26, 0)
+mesh = SubResource("BoxMesh_lid")
+surface_material_override/0 = ExtResource("1_metal")
+
+[node name="WheelFL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.65, 0.11, 0.4)
+mesh = SubResource("BoxMesh_wheel")
+surface_material_override/0 = ExtResource("1_metal")
+
+[node name="WheelFR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.65, 0.11, 0.4)
+mesh = SubResource("BoxMesh_wheel")
+surface_material_override/0 = ExtResource("1_metal")
+
+[node name="WheelBL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.65, 0.11, -0.4)
+mesh = SubResource("BoxMesh_wheel")
+surface_material_override/0 = ExtResource("1_metal")
+
+[node name="WheelBR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.65, 0.11, -0.4)
+mesh = SubResource("BoxMesh_wheel")
+surface_material_override/0 = ExtResource("1_metal")

@@ -145,9 +145,45 @@ mid-ground; leaving distant bulk architecture un-inked builds depth.
 ## 6. Current blockout
 
 `scenes/main.tscn` + `scripts/world/district_blockout.gd` generate a seeded
-placeholder district: greybox towers, hung neon signage with per-sign flicker
-phase, cantilevered sodium street lamps, rubble lots, and a central plaza.
+placeholder district: greybox towers with dressed rooflines (water tanks, AC
+units, antennas with neon beads), window lights and wall posters, hung neon
+signage with per-sign flicker phase, holographic ad boards, cantilevered sodium
+street lamps, catenary cables baked into a single MultiMesh, sidewalks with
+kerbs, rubble lots, rain puddles, steam vents, and street furniture (dumpsters,
+jersey barriers, bollards, traffic cones, manholes, scaffold) plus shoveable
+rigid-body debris — all around a central plaza.
+
+The ground plane uses `shaders/street_ground.gdshader`: world-space asphalt
+grain, cracks, oil stains, wet specular variation, and dashed lane paint locked
+to the same street lattice the blockout uses.
 
 It is **scaffolding for judging the shaders and camera**, not the shipping
 world generator — the chunk streamer under `worlds/` replaces it wholesale.
 Gameplay code must not depend on anything it spawns.
+
+---
+
+## 7. Atmosphere and post
+
+**Rain is a volume, not a texture.** `scripts/world/rain_system.gd` follows
+the camera with two GPU emitters: wind-slanted streaks above and splash rings
+on the street. `intensity` (0–1) is the only control gameplay code should
+touch. Because particles simulate in world space, the volume can chase the
+camera without dragging drops sideways.
+
+**Puddles are mirrors.** `shaders/puddle.gdshader` is near-black face-on and
+sky-violet at grazing angles; the specular glint is where neon smears live.
+Keep `spec_strength` high and `ROUGHNESS` low — the whole point is hard-edged
+reflected signage, not a soft sheen. The shoreline is world-space noise, so
+one shared material covers every puddle without repeating.
+
+**Holograms flicker and glitch.** `shaders/hologram.gdshader` is additive:
+the dark scanline bands read as air. `phase_offset` must differ per board or
+a street of ads pulses in unison — the blockout duplicates the material per
+board for exactly this reason.
+
+**The post pass prints the page.** `shaders/post_noir.gdshader` adds halftone
+shadow dots, 24 fps film grain, a vignette and a whisper of chromatic
+aberration. It sits on the `PostFX` canvas layer, *below* the HUD so debug
+text stays crisp. Tune with restraint: if a viewer can name the effect, it is
+too strong.

@@ -1,24 +1,17 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/systems/game_root.gd" id="1_root"]
 [ext_resource type="Script" path="res://scripts/world/district_blockout.gd" id="2_blockout"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3_player"]
-[ext_resource type="Material" path="res://assets/materials/toon_asphalt.tres" id="4_asphalt"]
-
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_noir"]
-sky_top_color = Color(0.043, 0.031, 0.094, 1)
-sky_horizon_color = Color(0.31, 0.067, 0.235, 1)
-sky_curve = 0.18
-sky_energy_multiplier = 0.4
-ground_bottom_color = Color(0.024, 0.02, 0.035, 1)
-ground_horizon_color = Color(0.18, 0.055, 0.14, 1)
-ground_curve = 0.04
-ground_energy_multiplier = 0.3
-sun_angle_max = 24.0
-sun_curve = 0.08
+[ext_resource type="Material" path="res://assets/materials/street_asphalt.tres" id="4_asphalt"]
+[ext_resource type="Script" path="res://scripts/world/rain_system.gd" id="5_rain"]
+[ext_resource type="Material" path="res://assets/materials/post_noir.tres" id="6_post"]
+[ext_resource type="Material" path="res://assets/materials/post_ink.tres" id="7_ink"]
+[ext_resource type="Material" path="res://assets/materials/sky_noir.tres" id="8_sky"]
+[ext_resource type="Script" path="res://scripts/world/storm_director.gd" id="9_storm"]
 
 [sub_resource type="Sky" id="Sky_noir"]
-sky_material = SubResource("ProceduralSkyMaterial_noir")
+sky_material = ExtResource("8_sky")
 
 [sub_resource type="Environment" id="Environment_noir"]
 background_mode = 2
@@ -26,17 +19,20 @@ sky = SubResource("Sky_noir")
 ambient_light_source = 2
 ambient_light_color = Color(0.192, 0.153, 0.337, 1)
 ambient_light_sky_contribution = 0.35
-ambient_light_energy = 1.1
+ambient_light_energy = 1.25
 tonemap_mode = 3
-tonemap_exposure = 1.0
+tonemap_exposure = 1.12
 tonemap_white = 3.0
 ssao_enabled = true
 ssao_radius = 1.4
 ssao_intensity = 1.6
-ssil_enabled = false
+ssil_enabled = true
+ssil_radius = 2.5
+ssil_intensity = 0.6
+ssil_sharpness = 0.98
 glow_enabled = true
 glow_normalized = true
-glow_intensity = 0.95
+glow_intensity = 1.05
 glow_strength = 1.0
 glow_bloom = 0.12
 glow_blend_mode = 1
@@ -53,15 +49,15 @@ fog_sky_affect = 0.3
 volumetric_fog_enabled = true
 volumetric_fog_density = 0.006
 volumetric_fog_albedo = Color(0.5, 0.42, 0.62, 1)
-volumetric_fog_emission = Color(0.075, 0.02, 0.11, 1)
-volumetric_fog_emission_energy = 0.3
+volumetric_fog_emission = Color(0.12, 0.03, 0.16, 1)
+volumetric_fog_emission_energy = 0.45
 volumetric_fog_anisotropy = 0.25
 volumetric_fog_length = 160.0
 volumetric_fog_ambient_inject = 0.2
 adjustment_enabled = true
 adjustment_brightness = 1.0
-adjustment_contrast = 1.12
-adjustment_saturation = 1.18
+adjustment_contrast = 1.16
+adjustment_saturation = 1.32
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(500, 500)
@@ -104,8 +100,33 @@ surface_material_override/0 = ExtResource("4_asphalt")
 [node name="Blockout" type="Node3D" parent="World"]
 script = ExtResource("2_blockout")
 
+[node name="Rain" type="Node3D" parent="World"]
+script = ExtResource("5_rain")
+
 [node name="Player" parent="." instance=ExtResource("3_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+
+[node name="PostFX" type="CanvasLayer" parent="."]
+layer = 0
+
+[node name="NoirRect" type="ColorRect" parent="PostFX"]
+material = ExtResource("6_post")
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="InkRect" type="ColorRect" parent="PostFX"]
+material = ExtResource("7_ink")
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="StormDirector" type="Node" parent="."]
+script = ExtResource("9_storm")
 
 [node name="DebugHUD" type="CanvasLayer" parent="."]
 
