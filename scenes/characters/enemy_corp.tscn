@@ -1,0 +1,28 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/characters/npc_body.gd" id="1_body"]
+[ext_resource type="Script" path="res://scripts/characters/comic_visual.gd" id="2_visual"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
+radius = 0.38
+height = 1.84
+
+[node name="EnemyCorp" type="CharacterBody3D"]
+collision_layer = 3
+collision_mask = 1
+script = ExtResource("1_body")
+wander = true
+wander_radius = 4.0
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.92, 0)
+shape = SubResource("CapsuleShape3D_body")
+
+[node name="Visual" type="Node3D" parent="."]
+script = ExtResource("2_visual")
+kit = 4
+face_mask = false
+show_visor = true
+hair_style = 2
+idle_bob = 0.6
+walk_swing = 1.0

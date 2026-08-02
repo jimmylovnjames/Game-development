@@ -1,0 +1,26 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/characters/npc_body.gd" id="1_body"]
+[ext_resource type="Script" path="res://scripts/characters/comic_visual.gd" id="2_visual"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
+radius = 0.38
+height = 1.82
+
+[node name="NPCCivilian" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_body")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.91, 0)
+shape = SubResource("CapsuleShape3D_body")
+
+[node name="Visual" type="Node3D" parent="."]
+script = ExtResource("2_visual")
+kit = 1
+face_mask = false
+show_visor = false
+hair_style = 1
+idle_bob = 1.0
+walk_swing = 0.85

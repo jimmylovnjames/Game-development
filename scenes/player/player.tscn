@@ -1,19 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_ctrl"]
-[ext_resource type="Material" path="res://assets/materials/toon_player.tres" id="2_mat"]
+[ext_resource type="Script" path="res://scripts/characters/comic_visual.gd" id="2_visual"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
-radius = 0.4
-height = 1.8
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
-radius = 0.4
-height = 1.8
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_head"]
-radius = 0.16
-height = 0.44
+radius = 0.38
+height = 1.82
 
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 2
@@ -21,21 +13,20 @@ collision_mask = 1
 script = ExtResource("1_ctrl")
 
 [node name="Collision" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.91, 0)
 shape = SubResource("CapsuleShape3D_body")
 
-[node name="Mesh" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-mesh = SubResource("CapsuleMesh_body")
-surface_material_override/0 = ExtResource("2_mat")
-
-[node name="Snout" type="MeshInstance3D" parent="Mesh"]
-transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0.62, -0.3)
-mesh = SubResource("CapsuleMesh_head")
-surface_material_override/0 = ExtResource("2_mat")
+[node name="Visual" type="Node3D" parent="."]
+script = ExtResource("2_visual")
+kit = 0
+face_mask = false
+show_visor = true
+hair_style = 1
+idle_bob = 1.0
+walk_swing = 1.0
 
 [node name="CameraPivot" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.65, 0)
 
 [node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot"]
 collision_mask = 1
@@ -54,7 +45,6 @@ collision_mask = 16
 collide_with_areas = true
 
 [node name="Flashlight" type="SpotLight3D" parent="CameraPivot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 visible = false
 light_color = Color(0.85, 0.92, 1, 1)
 light_energy = 4.0
