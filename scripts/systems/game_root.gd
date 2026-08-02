@@ -23,6 +23,7 @@ var _backend: NpcLlmBackend
 var _gossip: GossipNetwork
 var _ambience: AmbienceDirector
 var _comic_fx: ComicFX
+var _graphics: GraphicsSettings
 var _prompt_label: Label
 var _prompt_panel: PanelContainer
 var _journal_label: Label
@@ -56,6 +57,14 @@ func _ready() -> void:
 	_comic_fx = ComicFX.new()
 	_comic_fx.name = "ComicFX"
 	add_child(_comic_fx)
+
+	# Last, and deferred: the blockout's lights exist by now (children are ready
+	# before their parent), but deferring lets any late spawner land first so
+	# nothing escapes the distance-fade pass.
+	_graphics = GraphicsSettings.new()
+	_graphics.name = "GraphicsSettings"
+	add_child(_graphics)
+	_graphics.call_deferred("apply", -1, self)
 
 	_dialogue = DIALOGUE_SCENE.instantiate() as DialogueUI
 	add_child(_dialogue)
@@ -187,6 +196,10 @@ func _print_boot_report() -> void:
 		"rendering/renderer/rendering_method", "?"
 	))
 	print("  headless      : %s" % str(DisplayServer.get_name() == "headless"))
+	print("  gpu           : %s" % RenderingServer.get_video_adapter_name())
+	print("  quality tier  : %s" % (
+		_graphics.get_tier_name() if _graphics != null else "?"
+	))
 	print("  main scene    : %s" % scene_file_path)
 	print("  player at     : %s" % str(_player.global_position))
 	print("  vex at        : %s" % str(_vex.global_position if _vex else Vector3.ZERO))

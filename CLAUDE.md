@@ -216,6 +216,25 @@ model is wrong.
 
 ---
 
+## Performance tiers
+
+`scripts/systems/graphics_settings.gd` owns render scale, MSAA, the optional
+environment passes and light distance-fade, keyed to a `potato` / `laptop` /
+`desktop` tier detected from the video adapter. `GameRoot` applies it deferred,
+after the blockout has spawned, so nothing escapes the fade pass.
+
+- **New lights need nothing.** The tier walks the whole tree and sets
+  `distance_fade_*` on every `Light3D`, so a light added anywhere inherits it.
+- **Do not hand-tune quality in a scene.** Put it in the tier table, or it will
+  be wrong on somebody else's machine.
+- **Cel shading, ink and neon never vary by tier.** Only atmosphere does. If a
+  tier changes the *kind* of look, that is a bug.
+- `tools/verify_setup.gd` fails the build on a malformed tier table — a typo
+  there otherwise shows up as a black screen on hardware you do not own.
+
+Test a tier with `godot --path . -- --quality=laptop`, or
+`tools/screenshot.gd -- --quality=laptop` to see it.
+
 ## 7. Conventions
 
 - GDScript, tabs, static types wherever the parser can carry them.

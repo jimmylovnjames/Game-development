@@ -21,6 +21,7 @@ extends SceneTree
 ##   --rain=0          hide the rain volume
 ##   --postfx=0        hide the post-process layer
 ##   --burst=WORD      letter a comic word over the plaza (held for the shot)
+##   --quality=TIER    force a graphics tier: potato / laptop / desktop
 ##   --exposure=F      multiply tonemap exposure
 
 var _out_path := "user://screenshot.png"
@@ -37,6 +38,7 @@ var _glow := true
 var _rain := true
 var _postfx := true
 var _burst_word := ""
+var _quality := ""
 var _exposure := -1.0
 
 var _frames := 0
@@ -80,6 +82,7 @@ func _parse_args() -> void:
 			"rain": _rain = value != "0"
 			"postfx": _postfx = value != "0"
 			"burst": _burst_word = value
+			"quality": _quality = value
 			"exposure": _exposure = float(value)
 
 
@@ -103,6 +106,16 @@ func _setup_shot() -> void:
 	var postfx := _scene.get_node_or_null("PostFX") as CanvasLayer
 	if postfx != null:
 		postfx.visible = _postfx
+
+	# Force the tier before the environment overrides, so --fog / --glow still
+	# have the last word over whatever the tier decided.
+	if not _quality.is_empty():
+		var graphics := _scene.get_node_or_null("GraphicsSettings") as GraphicsSettings
+		if graphics != null:
+			for tier: int in GraphicsSettings.TIERS:
+				if GraphicsSettings.TIERS[tier]["name"] == _quality:
+					graphics.apply(tier, _scene)
+					break
 
 	_apply_environment_overrides()
 

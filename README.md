@@ -63,6 +63,48 @@ Useful flags: `--cam/--look` (detached camera), `--fog=0`, `--glow=0`,
 `--rain=0`, `--postfx=0`, `--exposure=`, `--hud=0`. Full list in the script
 header.
 
+## Running on a laptop (and on a Mac)
+
+The district puts ~135 realtime lights and ~1500 mesh instances in front of the
+camera with volumetric fog, SSIL, SSAO and glow on top. That is a discrete-GPU
+load. `GraphicsSettings` picks a tier at boot from the video adapter and applies
+it to the viewport, the environment and every light in the scene.
+
+| Tier | Render scale | MSAA | Volumetric fog | SSIL | SSAO | Lights fade past |
+|---|---|---|---|---|---|---|
+| `potato` | 0.62 | off (FXAA) | no | no | no | 29 m |
+| `laptop` | 0.80 | off (FXAA) | no | no | yes | 48 m |
+| `desktop` | 1.00 | 4x | yes | yes | yes | 100 m |
+
+Cel shading, ink outlines and neon are identical at every tier — what changes is
+how much atmosphere sits on top and how far away things keep being lit.
+
+Override the detected tier per launch:
+
+```bash
+godot --path . -- --quality=laptop     # or potato / desktop
+```
+
+or permanently in **Project Settings → Neonwastes → Graphics → Tier**
+(`auto` by default). The boot report prints the GPU and the tier it chose, so
+check that first if performance is not what you expect.
+
+### macOS notes
+
+You do not need an export to try it — open the project in Godot and press F5.
+
+- **Apple Silicon:** Godot 4.4+ ships a native Metal driver, which is faster
+  than Vulkan-through-MoltenVK. Try `godot --path . --rendering-driver metal`.
+- **Retina is the quiet killer.** A 1440-wide window is a 2880-wide
+  framebuffer, so the 3D pass costs four times what the window size suggests.
+  The sub-1.0 render scale on the laptop and potato tiers exists for exactly
+  this; the UI still draws at native resolution.
+- **Stay on Forward+.** Dropping to `--rendering-method mobile` or
+  `gl_compatibility` loses volumetric fog, SSIL and SSAO anyway, and
+  `post_ink` / `post_noir` sample the depth texture, which those renderers do
+  not provide — the comic ink pass breaks rather than degrades. Lower the tier
+  before you lower the renderer.
+
 ## MCP servers
 
 Three Godot MCP servers are registered in `.mcp.json` (project scope — your

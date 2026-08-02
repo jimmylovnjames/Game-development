@@ -131,6 +131,10 @@ attack_secondary={
 3d_physics/layer_9="cover"
 3d_physics/layer_10="water"
 
+[neonwastes]
+
+graphics/tier="auto"
+
 [physics]
 
 3d/physics_engine="Jolt Physics"

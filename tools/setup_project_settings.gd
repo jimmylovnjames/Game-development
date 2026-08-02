@@ -128,6 +128,25 @@ func _setup_rendering() -> void:
 	ProjectSettings.set_setting("rendering/environment/volumetric_fog/volume_depth", 96)
 
 	ProjectSettings.set_setting("rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality", 2)
+
+	# Which quality tier to boot at. "auto" reads the video adapter, which is
+	# what a laptop wants; potato / laptop / desktop pin it. Overridable per
+	# launch with `-- --quality=laptop`. GraphicsSettings owns the actual
+	# render scale, MSAA and effect toggles at runtime.
+	#
+	# The initial value differs from the value on purpose: ProjectSettings only
+	# writes a setting that differs from its default, so a setting whose default
+	# equals its value never lands in project.godot and never shows up in the
+	# editor for anyone to change.
+	ProjectSettings.set_setting("neonwastes/graphics/tier", "auto")
+	ProjectSettings.set_initial_value("neonwastes/graphics/tier", "")
+	ProjectSettings.add_property_info({
+		"name": "neonwastes/graphics/tier",
+		"type": TYPE_STRING,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "auto,potato,laptop,desktop",
+	})
+
 	print("Configured rendering settings.")
 
 

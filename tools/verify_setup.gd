@@ -19,6 +19,7 @@ func _initialize() -> void:
 	_check_main_scene()
 	_check_addons()
 	_check_quests()
+	_check_graphics_tiers()
 
 	print("")
 	if _failures == 0:
@@ -250,6 +251,41 @@ func _describe(node: Node, depth: int) -> void:
 	for child in node.get_children():
 		print("        %s- %s (%s)" % ["  ".repeat(depth), child.name, child.get_class()])
 		_describe(child, depth + 1)
+
+
+## The tier table is what lets this run on a laptop at all, so a typo in it
+## should fail the build rather than surface as a black screen on someone
+## else's machine.
+func _check_graphics_tiers() -> void:
+	print("[graphics tiers]")
+	var required := [
+		"name", "render_scale", "scaling_mode", "msaa", "fxaa", "volumetric_fog",
+		"ssil", "ssao", "glow", "shadow_atlas", "directional_shadows",
+		"shadow_distance", "light_fade_begin", "light_fade_length", "rain_intensity",
+	]
+	for tier: int in GraphicsSettings.TIERS:
+		var config: Dictionary = GraphicsSettings.TIERS[tier]
+		var missing: Array[String] = []
+		for key: String in required:
+			if not config.has(key):
+				missing.append(key)
+		if not missing.is_empty():
+			_fail("tier '%s' is missing %s" % [config.get("name", tier), ", ".join(missing)])
+			continue
+		var scale := float(config["render_scale"])
+		if scale <= 0.0 or scale > 1.0:
+			_fail("tier '%s' has render_scale %.2f outside (0, 1]" % [config["name"], scale])
+		else:
+			_ok("tier '%s': scale %.2f, fade %.0f m, vol_fog=%s" % [
+				config["name"], scale, config["light_fade_begin"],
+				str(config["volumetric_fog"]),
+			])
+
+	var resolved: int = GraphicsSettings.resolve_tier()
+	if GraphicsSettings.TIERS.has(resolved):
+		_ok("resolves to '%s' on this machine" % GraphicsSettings.TIERS[resolved]["name"])
+	else:
+		_fail("resolve_tier() returned %s, which is not a tier" % str(resolved))
 
 
 func _check_addons() -> void:
