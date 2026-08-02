@@ -140,7 +140,12 @@ func _poll_interact() -> void:
 
 
 func _update_camera() -> void:
-	_pivot.rotation.y = _yaw
+	# The pivot is a child of the body, and _apply_movement turns the body to
+	# face the direction of travel. Writing the pivot's *local* yaw therefore
+	# adds the body's rotation on top of the camera's, so walking drags the view
+	# around and the camera-relative movement basis stops agreeing with what is
+	# actually on screen. Counter-rotate so the pivot's world yaw stays _yaw.
+	_pivot.rotation.y = wrapf(_yaw - rotation.y, -PI, PI)
 	_pivot.rotation.x = _pitch
 	var target_length := camera_distance_aim if Input.is_action_pressed("attack_secondary") else camera_distance
 	_spring_arm.spring_length = lerpf(_spring_arm.spring_length, target_length, 0.2)

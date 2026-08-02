@@ -8,6 +8,10 @@ extends Node3D
 
 const VEX_SCENE := preload("res://scenes/characters/npc_vex.tscn")
 const DIALOGUE_SCENE := preload("res://scenes/ui/dialogue_ui.tscn")
+const SPINE_GATE_SCENE := preload("res://scenes/props/spine_gate.tscn")
+## Matches the marker on mq01's reach_spine_gate objective: the far end of a
+## street on the district's north-east edge, a real walk from the plaza.
+const SPINE_GATE_POSITION := Vector3(96.0, 0.0, -42.0)
 
 @export var print_boot_report: bool = true
 
@@ -29,6 +33,7 @@ var _prompt_panel: PanelContainer
 var _journal_label: Label
 var _journal_panel: PanelContainer
 var _vex: NpcVex
+var _spine_gate: SpineGate
 
 
 func _ready() -> void:
@@ -72,6 +77,7 @@ func _ready() -> void:
 	_build_hud()
 
 	_spawn_vex()
+	_spawn_spine_gate()
 	_bind_persona_shells()
 
 	_player.global_position = _blockout.get_spawn_point()
@@ -179,6 +185,18 @@ func _spawn_vex() -> void:
 	_vex.bind(_dialogue, _quests)
 
 
+## MQ01's destination. Without it the quest has three outcomes and no way to
+## reach any of them — the first story beat literally cannot end.
+func _spawn_spine_gate() -> void:
+	_spine_gate = SPINE_GATE_SCENE.instantiate() as SpineGate
+	_spine_gate.name = "SpineGate"
+	_spine_gate.position = SPINE_GATE_POSITION
+	# Face back down the street toward the plaza the courier walks in from.
+	_spine_gate.rotation.y = PI * 0.5
+	$World.add_child(_spine_gate)
+	_spine_gate.bind(_dialogue, _quests, _flags, _comic_fx)
+
+
 ## Persona shells spawn with the blockout (before systems exist), so binding
 ## happens here, once the backend and flags are live.
 func _bind_persona_shells() -> void:
@@ -203,6 +221,9 @@ func _print_boot_report() -> void:
 	print("  main scene    : %s" % scene_file_path)
 	print("  player at     : %s" % str(_player.global_position))
 	print("  vex at        : %s" % str(_vex.global_position if _vex else Vector3.ZERO))
+	print("  spine gate at : %s" % str(
+		_spine_gate.global_position if _spine_gate else Vector3.ZERO
+	))
 	print("  spawned nodes : %d under World" % _count_descendants($World))
 	print("  viewport size : %s" % str(viewport.get_visible_rect().size))
 	print("================================")

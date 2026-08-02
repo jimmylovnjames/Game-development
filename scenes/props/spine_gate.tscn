@@ -1,0 +1,29 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/spine_gate.gd" id="1_gate"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_console"]
+size = Vector3(1.0, 2.0, 0.8)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_reach"]
+size = Vector3(13.0, 7.0, 9.0)
+
+[node name="SpineGate" type="StaticBody3D"]
+collision_layer = 17
+collision_mask = 0
+script = ExtResource("1_gate")
+interactable_id = &"trigger_spine_gate"
+prompt = "Use the pass reader"
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("BoxShape3D_console")
+
+[node name="ReachTrigger" type="Area3D" parent="."]
+collision_layer = 64
+collision_mask = 2
+monitorable = false
+
+[node name="TriggerShape" type="CollisionShape3D" parent="ReachTrigger"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+shape = SubResource("BoxShape3D_reach")

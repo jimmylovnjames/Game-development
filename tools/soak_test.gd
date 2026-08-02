@@ -26,6 +26,15 @@ const DIALOGUE_ADVANCE_GAP := 8
 ## the vendor's hold tops out at 6.5 s, so anything under ~9 s can miss a step
 ## it did not actually fail to take.
 const WANDER_FRAMES := 660
+const GATE_REACH_FRAMES := 24
+const GATE_RAY_DEADLINE := 90
+const GATE_FRAMES := 220
+## Index 1 of the gate's three outcomes: sell the pass. Chosen for the test
+## because reaching it needs the menu to actually navigate, not just confirm.
+const GATE_CHOICE_INDEX := 1
+## Long enough that a press always straddles at least one idle frame, since the
+## menu polls in _process while the test drives from _physics_process.
+const TAP_HOLD_FRAMES := 4
 
 var _scene: Node = null
 var _player: CharacterBody3D = null
@@ -143,6 +152,16 @@ func _physics_process(_delta: float) -> bool:
 				_begin_wander_check()
 			if _stage_frame >= WANDER_FRAMES:
 				_finish_wander_check()
+				_next_stage()
+		15:
+			if _stage_frame == 2:
+				_begin_gate()
+			elif not _gate_opened and _stage_frame > GATE_REACH_FRAMES:
+				_try_gate_ray()
+			elif _gate_opened:
+				_drive_gate_dialogue()
+			if _stage_frame >= GATE_FRAMES:
+				_finish_gate()
 				_report()
 				return true
 	return false
@@ -613,6 +632,182 @@ func _finish_wander_check() -> void:
 		_fail("watching warden is not tracking the courier (off by %.2f rad)" % off)
 	else:
 		_ok("watching warden tracks the courier across the plaza (%.2f rad off)" % off)
+
+
+var _gate: SpineGate = null
+var _gate_ray_ok: bool = false
+var _gate_opened: bool = false
+var _gate_moves_done: int = 0
+var _gate_committed: bool = false
+var _held_action: String = ""
+var _held_frames: int = 0
+var _gate_outcome: StringName = &""
+
+
+## MQ01 end to end: walk into the gate volume, read the reader, and take one of
+## the three branches. Before the gate existed the quest could not be finished
+## at all, so this stage is the one that proves the first beat has an ending.
+func _begin_gate() -> void:
+	print("[stage 15: spine gate + MQ01 outcome]")
+	_gate = _scene.get_node_or_null("World/SpineGate") as SpineGate
+	if _gate == null:
+		_fail("SpineGate missing from the world")
+		return
+	# Stand inside the reach volume, facing the console.
+	# Close enough that the ray, which starts at the camera behind the player,
+	# still reaches the console face 0.55 m inside the gate origin.
+	_player.global_position = _gate.global_position + Vector3(0.0, 0.2, 1.5)
+	_player.velocity = Vector3.ZERO
+	if _player is PlayerController:
+		(_player as PlayerController).set_look_angles(0.0, -0.1)
+		(_player as PlayerController).camera_distance = 1.0
+
+
+## Poll for the ray rather than sampling one exact frame: the spring arm is
+## still easing to its new length for the first frames after the teleport, so a
+## single-frame check races the camera and reports a miss that is not real.
+func _try_gate_ray() -> void:
+	if _gate == null:
+		return
+
+	var target: Node3D = null
+	if _player.has_method("get_current_interactable"):
+		target = _player.get_current_interactable() as Node3D
+
+	if target == _gate:
+		_gate_ray_ok = true
+	elif _stage_frame < GATE_RAY_DEADLINE:
+		return
+
+	if _gate.has_been_reached():
+		_ok("walking into the gate volume fired reach_spine_gate")
+	else:
+		_fail("gate reach trigger never fired")
+
+	if _quests != null and _quests.is_objective_done(
+		&"mq01_the_transit_pass", &"reach_spine_gate"
+	):
+		_ok("reach_spine_gate objective completed")
+	else:
+		_fail("reach_spine_gate objective did not complete")
+
+	if _gate_ray_ok:
+		_ok("InteractRay locked onto the gate console after %d frames" % _stage_frame)
+	else:
+		_fail("InteractRay never found the gate console within %d frames" % GATE_RAY_DEADLINE)
+
+	_gate.interact(_player)
+	_gate_opened = true
+
+
+## Read through the lines, then walk the menu down to the chosen branch and
+## commit — all through the same actions a player presses.
+##
+## Uses an explicit press/release state rather than a global frame phase. Phase
+## arithmetic silently assumes every sub-state is entered on the press half of
+## the cycle; enter one on the release half and it "releases" a key it never
+## pressed, then marks the step done.
+func _drive_gate_dialogue() -> void:
+	if _dialogue == null or _gate == null or _gate_committed:
+		return
+
+	if not _dialogue.is_choosing():
+		_tap("interact")
+		return
+
+	if _dialogue.get_selected_index() != GATE_CHOICE_INDEX:
+		_tap("move_back")
+		return
+
+	if _held_action == "move_back":
+		Input.action_release("move_back")
+		_held_action = ""
+		_held_frames = 0
+		return
+
+	if _tap("interact"):
+		_gate_committed = true
+
+
+## Hold an action for a few frames, then let go. Returns true on the frame the
+## key is released, which is the frame the menu has actually seen the press.
+func _tap(action: String) -> bool:
+	if _held_action != action:
+		if not _held_action.is_empty():
+			Input.action_release(_held_action)
+		_held_action = action
+		_held_frames = 0
+		Input.action_press(action)
+		return false
+
+	_held_frames += 1
+	if _held_frames < TAP_HOLD_FRAMES:
+		return false
+
+	Input.action_release(action)
+	_held_action = ""
+	_held_frames = 0
+	return true
+
+
+func _finish_gate() -> void:
+	if not _held_action.is_empty():
+		Input.action_release(_held_action)
+		_held_action = ""
+	Input.action_release("interact")
+	Input.action_release("move_back")
+	if _gate == null:
+		return
+
+	if not _gate_opened:
+		_fail("gate dialogue never opened")
+		return
+
+	if not _gate.is_resolved():
+		# Report the menu state instead of just "did not commit" — the useful
+		# question is always whether it never opened, never moved, or never
+		# confirmed.
+		print("        dialogue active=%s choosing=%s pending=%s selected=%d/%d moves=%d" % [
+			str(_dialogue.is_active()), str(_dialogue.is_choosing()),
+			str(_dialogue.has_pending_choices()),
+			_dialogue.get_selected_index(), _dialogue.get_choice_count(),
+			_gate_moves_done,
+		])
+
+	if _gate.is_resolved():
+		_ok("gate resolved MQ01 through the choice menu")
+	else:
+		_fail("gate dialogue never reached a committed choice")
+		return
+
+	if _quests == null:
+		_fail("QuestSystem missing")
+		return
+	if not _quests.is_quest_completed(&"mq01_the_transit_pass"):
+		_fail("MQ01 is still active after the gate resolved")
+		return
+	_gate_outcome = _quests.get_outcome(&"mq01_the_transit_pass")
+	_ok("MQ01 completed on outcome \'%s\'" % _gate_outcome)
+
+	# The chosen branch, not just any branch: a menu that ignores navigation
+	# and always commits the first entry would pass a weaker check.
+	if _gate_outcome != SpineGate.OUTCOME_SELL:
+		_fail("expected outcome \'%s\' at menu index %d, got \'%s\'" % [
+			SpineGate.OUTCOME_SELL, GATE_CHOICE_INDEX, _gate_outcome,
+		])
+
+	var flags := _scene.get_node_or_null("WorldFlags") as WorldFlags
+	if flags != null and flags.has_flag(_gate_outcome):
+		_ok("outcome flag \'%s\' set on the world" % _gate_outcome)
+	else:
+		_fail("outcome flag was not set")
+
+	# The quest resolving has to leave a mark in the world, not only the log.
+	var caption := _gate.get_node_or_null("Arch/SignText") as Label3D
+	if caption != null and caption.text != "SPINE LINE — PASS ONLY":
+		_ok("gate signage changed to \'%s\'" % caption.text)
+	else:
+		_fail("gate signage did not change after the outcome")
 
 
 func _begin_jump() -> void:

@@ -68,6 +68,16 @@ func is_objective_done(quest_id: StringName, objective_id: StringName) -> bool:
 	return bool(_active[quest_id]["done"].get(objective_id, false))
 
 
+## Which outcome a finished quest ended on, or &"" if it is not finished.
+## The world needs this to keep showing the consequence after the fact.
+func get_outcome(quest_id: StringName) -> StringName:
+	return _completed.get(quest_id, &"")
+
+
+func is_quest_completed(quest_id: StringName) -> bool:
+	return _completed.has(quest_id)
+
+
 func get_active_quests() -> Array[Quest]:
 	var out: Array[Quest] = []
 	for entry: Dictionary in _active.values():

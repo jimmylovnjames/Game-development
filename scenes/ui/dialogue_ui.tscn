@@ -42,6 +42,19 @@ theme_override_font_sizes/font_size = 18
 autowrap_mode = 3
 text = "…"
 
+[node name="Choices" type="VBoxContainer" parent="Panel/Margin/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Cost" type="Label" parent="Panel/Margin/VBox"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.969, 1, 0.235, 0.85)
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3
+text = ""
+
 [node name="Hint" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0, 0.898, 1, 0.7)
