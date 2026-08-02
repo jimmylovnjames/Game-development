@@ -19,6 +19,18 @@ signal spoke(line: String)
 ## network writes it into circulation.
 signal knowledge_shared(item: KnowledgeItem, source: PersonaShell)
 
+## Once the courier takes Vex's pass, the warden stops pacing and starts
+## watching. One scripted beat, hung off the flag QuestSystem already sets for
+## every completed objective — no new system, no new wiring.
+const WATCH_FLAG := &"talk_to_vex"
+const WATCH_ARCHETYPE := &"warden"
+const WATCH_LINE := "Off duty. Not off watch. Not since you took that."
+const WATCH_BARK_SECONDS := 7.0
+
+## Inside this radius a shell stops wandering and turns to the courier. Also the
+## arbiter between gait and facing: only one of them steers rotation.y at a time.
+const FACE_RADIUS := 6.5
+
 @export var profile: PersonaProfile
 ## How warm the shell is to the courier right now. Quests and gifts move this.
 @export_range(0.0, 1.0) var disposition: float = 0.5
@@ -38,6 +50,22 @@ var _rig: Node3D = null
 var _idle_time: float = 0.0
 var _look_target: Node3D = null
 
+var _gait: Dictionary = {}
+var _home := Vector3.ZERO
+var _patrol_axis := Vector3.FORWARD
+var _wander_target := Vector3.ZERO
+var _hold_left: float = 0.0
+var _moving: bool = false
+var _stride_phase: float = 0.0
+var _stride_amount: float = 0.0
+var _orbit_angle: float = 0.0
+var _orbit_dir: float = 1.0
+var _watching: bool = false
+## Interactable's base is CollisionObject3D, so the body API is not statically
+## visible even though persona_shell.tscn roots at CharacterBody3D. A shell
+## attached to something else simply does not wander.
+var _body: CharacterBody3D = null
+
 
 func _ready() -> void:
 	super._ready()
@@ -53,6 +81,7 @@ func _ready() -> void:
 	_rng.seed = hash(String(profile.persona_id)) + 20771113
 	_bark_timer = _rng.randf_range(2.0, profile.bark_interval)
 	_idle_time = _rng.randf_range(0.0, 10.0)
+	_init_wander()
 	_build_rig()
 	_bark_label = get_node_or_null("BarkLabel") as Label3D
 	if _bark_label != null:
@@ -81,18 +110,60 @@ func bind(dialogue: DialogueUI, flags: WorldFlags, backend: NpcLlmBackend) -> vo
 	_dialogue = dialogue
 	_flags = flags
 	_backend = backend
+	if _flags == null:
+		return
+	if not _flags.flag_changed.is_connected(_on_flag_changed):
+		_flags.flag_changed.connect(_on_flag_changed)
+	# Shells are bound after the blockout spawns them, so the beat may already
+	# have fired by the time we get here (a reload, or a late-registered shell).
+	if _flags.has_flag(WATCH_FLAG):
+		_begin_watch()
+
+
+func _on_flag_changed(flag: StringName, value: bool) -> void:
+	if flag == WATCH_FLAG and value:
+		_begin_watch()
+
+
+## The visible consequence of MQ01's first beat: the warden abandons his patrol
+## and does not look away again. It reads *because* there was a patrol to break.
+func _begin_watch() -> void:
+	if _watching or profile == null:
+		return
+	if profile.rig_archetype != WATCH_ARCHETYPE:
+		return
+	_watching = true
+	_moving = false
+	_hold_left = 0.0
+	if _body != null:
+		_body.velocity = Vector3.ZERO
+	if _bark_label != null:
+		_bark_label.text = WATCH_LINE
+		_bark_label.visible = true
+		_bark_show_left = WATCH_BARK_SECONDS
+	spoke.emit(WATCH_LINE)
+	print("[PersonaShell] %s breaks patrol and watches the courier." % profile.display_name)
+
+
+## True once this shell has reacted to the pass. Exposed for the soak test.
+func is_watching() -> bool:
+	return _watching
 
 
 func _process(delta: float) -> void:
 	if profile == null:
 		return
 	_idle_time += delta
+	# Breathe always runs; the gait layers on top of it and eases to nothing
+	# when the shell is standing still.
 	CharacterBuilder.apply_idle(_rig, _idle_time, 0.8)
+	CharacterBuilder.apply_gait(_rig, _stride_phase, _stride_amount)
 	_update_facing(delta)
 	_update_barks(delta)
 
 
 ## Turn to face the courier when they are close and nobody is mid-sentence.
+## A watching shell has no radius — that is the whole point of it.
 func _update_facing(delta: float) -> void:
 	if _look_target == null or not is_instance_valid(_look_target):
 		_look_target = get_tree().get_first_node_in_group("player") as Node3D
@@ -100,10 +171,122 @@ func _update_facing(delta: float) -> void:
 	if _dialogue != null and _dialogue.is_active():
 		return
 	var dist := global_position.distance_to(_look_target.global_position)
-	if dist > 6.5:
+	if dist > FACE_RADIUS and not _watching:
 		return
 	var want := CharacterBuilder.yaw_toward(global_position, _look_target.global_position)
 	rotation.y = lerp_angle(rotation.y, want, minf(3.2 * delta, 1.0))
+
+
+## --- Wander ---------------------------------------------------------------
+
+func _init_wander() -> void:
+	# `self as CharacterBody3D` is a parse error — CharacterBody3D does not
+	# inherit PersonaShell, so the compiler sees an impossible sibling cast.
+	# Widening to Node first makes it an ordinary downcast, which succeeds
+	# whenever the scene root really is a body.
+	var as_node: Node = self
+	_body = as_node as CharacterBody3D
+	_gait = CharacterBuilder.gait_for(profile.rig_archetype)
+	_home = position
+	# Pace along the direction the designer pointed this shell, so a patrol runs
+	# down the kerb it was placed on rather than across it.
+	_patrol_axis = Vector3(sin(rotation.y), 0.0, cos(rotation.y))
+	_hold_left = _rng.randf_range(0.0, float(_gait["hold"].y))
+	_orbit_dir = 1.0 if _rng.randf() < 0.5 else -1.0
+	_orbit_angle = _rng.randf_range(0.0, TAU)
+
+
+func _physics_process(delta: float) -> void:
+	if profile == null or _body == null:
+		return
+
+	# Face-player and dialogue both outrank wandering: people stop and look at
+	# you rather than pacing through a conversation.
+	if _watching or _is_busy() or _player_is_near():
+		_halt(delta)
+	else:
+		_step_wander(delta)
+
+	if _body.is_on_floor():
+		_body.velocity.y = 0.0
+	else:
+		_body.velocity.y -= 9.8 * delta
+	_body.move_and_slide()
+
+
+func _is_busy() -> bool:
+	return _dialogue != null and _dialogue.is_active()
+
+
+func _player_is_near() -> bool:
+	if _look_target == null or not is_instance_valid(_look_target):
+		return false
+	return global_position.distance_to(_look_target.global_position) <= FACE_RADIUS
+
+
+func _halt(delta: float) -> void:
+	_moving = false
+	_body.velocity.x = move_toward(_body.velocity.x, 0.0, 6.0 * delta)
+	_body.velocity.z = move_toward(_body.velocity.z, 0.0, 6.0 * delta)
+	_stride_amount = move_toward(_stride_amount, 0.0, 3.5 * delta)
+	# Keep advancing the phase while blending out so the legs settle closed
+	# instead of stopping wherever the sine happened to be.
+	_stride_phase += delta * 4.0 * _stride_amount
+
+
+func _step_wander(delta: float) -> void:
+	if _hold_left > 0.0:
+		_hold_left -= delta
+		_halt(delta)
+		return
+
+	if not _moving:
+		_pick_target()
+		_moving = true
+
+	var to_target := _wander_target - position
+	to_target.y = 0.0
+	if to_target.length() < 0.2:
+		_moving = false
+		_hold_left = _rng.randf_range(float(_gait["hold"].x), float(_gait["hold"].y))
+		return
+
+	var speed := float(_gait["speed"])
+	var dir := to_target.normalized()
+	_body.velocity.x = dir.x * speed
+	_body.velocity.z = dir.z * speed
+
+	var want := CharacterBuilder.yaw_toward(position, _wander_target)
+	rotation.y = lerp_angle(rotation.y, want, minf(4.0 * delta, 1.0))
+
+	_stride_amount = move_toward(_stride_amount, 1.0, 3.0 * delta)
+	# Stride frequency tracks speed, so the urchin scurries and the preacher
+	# processes without either looking like it is skating.
+	_stride_phase += delta * (3.0 + speed * 4.0)
+
+
+func _pick_target() -> void:
+	var radius := float(_gait["radius"])
+	match StringName(_gait["kind"]):
+		&"patrol":
+			# Flip to whichever end we are further from.
+			var ahead := _home + _patrol_axis * radius
+			var behind := _home - _patrol_axis * radius
+			_wander_target = behind if position.distance_to(ahead) < position.distance_to(behind) else ahead
+		&"circuit":
+			_orbit_angle += _orbit_dir * TAU / 6.0
+			_wander_target = _home + Vector3(cos(_orbit_angle), 0.0, sin(_orbit_angle)) * radius
+		&"circle":
+			# Kids do not commit to a direction for long.
+			if _rng.randf() < 0.3:
+				_orbit_dir = -_orbit_dir
+			_orbit_angle += _orbit_dir * _rng.randf_range(TAU / 6.0, TAU / 3.0)
+			_wander_target = _home + Vector3(cos(_orbit_angle), 0.0, sin(_orbit_angle)) * radius
+		_:
+			# "shift": a half-step around the pitch, never really leaving it.
+			var angle := _rng.randf_range(0.0, TAU)
+			var reach := _rng.randf_range(0.4, 1.0) * radius
+			_wander_target = _home + Vector3(cos(angle), 0.0, sin(angle)) * reach
 
 
 func _on_interact(who: Node3D) -> void:

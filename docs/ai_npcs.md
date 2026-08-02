@@ -90,3 +90,44 @@ them into circulation. Every `spread_interval` seconds a random item is
 repeated by a *different* persona as hearsay ("Word is — …", "Marrow says —
 …"), consumed on use so it never repeats. What you hear in the plaza comes
 back to you bent — the district talks about what you were told.
+
+## Standing still is a choice, not a default
+
+Shells wander. The style comes from `rig_archetype` — the silhouette a persona
+already declares — so a new character gets believable motion without a single
+extra field in its `.tres`:
+
+| Archetype | Gait | Reads as |
+|---|---|---|
+| `vendor`, `fixer`, `courier` | `shift` | Stays on its pitch, shuffles weight, takes the odd half-step |
+| `preacher` | `circuit` | Slow closed loop with long pauses, addressing nobody |
+| `urchin` | `circle` | Quick orbit that keeps reversing |
+| `warden` | `patrol` | Paces a line and turns at each end — habit, not duty |
+
+Tuning lives in `CharacterBuilder.GAITS` (radius, speed, hold range). A shell
+never leaves the pitch the designer placed it on: every target is an offset
+from its spawn point, so the plaza cannot empty itself overnight.
+
+`CharacterBuilder.apply_gait()` layers the walk on top of `apply_idle()` — it
+only writes `rotation.x` on limbs plus a bob on `rig.position.y`, so the breathe
+(`rig.scale.y`, `rig.rotation.z`) and the build-time arm splay both survive. The
+`amount` parameter eases between 0 and 1 rather than snapping, because a shell
+that stops mid-step otherwise freezes with one leg out.
+
+**Facing outranks wandering.** Inside `FACE_RADIUS` (6.5 m) a shell halts and
+turns to the courier, then resumes when they leave. That is both the believable
+read — people stop and look at you — and the arbitration that stops the gait and
+the head-look fighting over `rotation.y`.
+
+## The pass has a witness
+
+Completing `talk_to_vex` sets a world flag (`QuestSystem` does this for every
+objective it completes). `PersonaShell` listens on `WorldFlags.flag_changed`,
+and the `warden` archetype reacts: Bram abandons his patrol for good, drops his
+6.5 m facing radius so he tracks the courier from anywhere in the plaza, and
+says one line.
+
+The beat only reads because there was a patrol to break — the consequence is
+carried by the wander system rather than bolted on beside it. `soak_test.gd`
+stage 14 asserts it from ~35 m away, which is the only distance at which
+"ignores the face radius" can actually be proven.

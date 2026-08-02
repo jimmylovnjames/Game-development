@@ -177,6 +177,51 @@ static func apply_idle(rig: Node3D, time: float, intensity: float = 1.0) -> void
 	rig.rotation.z = sin(time * 0.6) * 0.008 * intensity
 
 
+## How each archetype occupies its patch of street. Keyed by rig archetype so a
+## persona gets believable motion from the silhouette it already declares — no
+## per-character authoring, no new fields on PersonaProfile.
+##
+##   shift   — stays put, shuffles weight, takes the odd half-step (stallholders)
+##   circuit — slow closed loop, long pauses to address nobody in particular
+##   circle  — quick orbit with frequent reversals (kids, restlessness)
+##   patrol  — paces a line and turns at each end (habit, not duty)
+const GAITS := {
+	&"fixer": {"kind": &"shift", "radius": 0.35, "speed": 0.40, "hold": Vector2(4.0, 8.0)},
+	&"vendor": {"kind": &"shift", "radius": 0.55, "speed": 0.45, "hold": Vector2(3.0, 6.5)},
+	&"preacher": {"kind": &"circuit", "radius": 1.5, "speed": 0.55, "hold": Vector2(2.5, 5.0)},
+	&"urchin": {"kind": &"circle", "radius": 2.1, "speed": 1.30, "hold": Vector2(0.4, 1.4)},
+	&"warden": {"kind": &"patrol", "radius": 3.2, "speed": 0.80, "hold": Vector2(2.0, 4.0)},
+	&"courier": {"kind": &"shift", "radius": 0.6, "speed": 0.60, "hold": Vector2(2.0, 5.0)},
+}
+
+
+static func gait_for(archetype: StringName) -> Dictionary:
+	return GAITS.get(archetype, GAITS[&"fixer"])
+
+
+## Walk cycle layered on top of apply_idle: limbs contra-swing, boots roll with
+## the leg they belong to, and the whole rig bobs on the step.
+##
+## `amount` is 0 standing and 1 at full stride. Callers ease it rather than
+## snapping, otherwise a shell that stops mid-step freezes with one leg out.
+## Only rotation.x is written, so the build-time arm splay on rotation.z and the
+## breathe on rig.scale.y / rig.rotation.z both survive untouched.
+static func apply_gait(rig: Node3D, phase: float, amount: float) -> void:
+	if rig == null:
+		return
+	var swing := sin(phase) * 0.40 * amount
+	for part_name: String in ["LegL", "BootL", "ArmR"]:
+		var node := rig.get_node_or_null(part_name) as Node3D
+		if node != null:
+			node.rotation.x = swing
+	for part_name: String in ["LegR", "BootR", "ArmL"]:
+		var node := rig.get_node_or_null(part_name) as Node3D
+		if node != null:
+			node.rotation.x = -swing
+	# Twice the stride frequency: the body rises on each footfall, not each cycle.
+	rig.position.y = absf(sin(phase)) * 0.035 * amount
+
+
 ## Yaw that faces `target` from `from`, for turn-to-face behaviour.
 static func yaw_toward(from: Vector3, target: Vector3) -> float:
 	var d := target - from

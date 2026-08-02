@@ -22,6 +22,10 @@ const PUSH_FRAMES := 80
 const TALK_AIM_FRAMES := 30
 const DIALOGUE_LINES := 5
 const DIALOGUE_ADVANCE_GAP := 8
+## Long enough for a hold-then-move cycle to come round on the slowest gait —
+## the vendor's hold tops out at 6.5 s, so anything under ~9 s can miss a step
+## it did not actually fail to take.
+const WANDER_FRAMES := 660
 
 var _scene: Node = null
 var _player: CharacterBody3D = null
@@ -133,6 +137,12 @@ func _physics_process(_delta: float) -> bool:
 				_begin_rig_check()
 			if _stage_frame >= 95:
 				_finish_rig_check()
+				_next_stage()
+		14:
+			if _stage_frame == 2:
+				_begin_wander_check()
+			if _stage_frame >= WANDER_FRAMES:
+				_finish_wander_check()
 				_report()
 				return true
 	return false
@@ -516,6 +526,93 @@ func _finish_rig_check() -> void:
 		_fail("marrow never turned to face the courier (off by %.2f rad)" % diff)
 	else:
 		_ok("shells turn to face the courier (%.2f rad off target)" % diff)
+
+
+var _wander_start: Dictionary = {}  # persona_id -> Vector3
+var _wander_yaw_start: Dictionary = {}  # persona_id -> float
+
+
+## Wander is only observable when the courier is out of the face-player radius,
+## so park the player far away and let the plaza get on with itself.
+func _begin_wander_check() -> void:
+	print("[stage 14: wander + MQ01 consequence]")
+	_player.global_position = Vector3(0.0, 0.1, 26.0)
+	_player.velocity = Vector3.ZERO
+	for persona_id: StringName in [&"marrow_scrap", &"sister_amp", &"kip_dockrat", &"warden_bram"]:
+		var shell := _find_shell(persona_id)
+		if shell != null:
+			_wander_start[persona_id] = shell.global_position
+			_wander_yaw_start[persona_id] = shell.rotation.y
+
+
+func _finish_wander_check() -> void:
+	# Every shell except the watching warden should have shifted its feet.
+	var moved := 0
+	var expected := 0
+	var strayed := false
+	for persona_id: StringName in [&"marrow_scrap", &"sister_amp", &"kip_dockrat"]:
+		var shell := _find_shell(persona_id)
+		if shell == null or not _wander_start.has(persona_id):
+			continue
+		var start: Vector3 = _wander_start[persona_id]
+		var travelled := shell.global_position - start
+		travelled.y = 0.0
+		expected += 1
+		if travelled.length() > 0.15:
+			moved += 1
+		else:
+			# Named, not counted: a silent 2/3 hides a whole archetype whose
+			# gait never drives the body at all.
+			_fail("%s (%s) never moved in %d frames" % [
+				persona_id, shell.profile.rig_archetype, WANDER_FRAMES,
+			])
+		# A wander that drifts is a wander that empties the plaza overnight.
+		var gait := CharacterBuilder.gait_for(shell.profile.rig_archetype)
+		if shell.global_position.distance_to(start) > float(gait["radius"]) * 2.5 + 1.0:
+			strayed = true
+			_fail("%s wandered %.1f m from where it started" % [
+				persona_id, shell.global_position.distance_to(start),
+			])
+
+	if moved == expected and expected > 0:
+		_ok("all %d wandering archetypes ran a cycle" % expected)
+	if not strayed:
+		_ok("shells stayed tethered to their pitch")
+
+	# Breathe must survive the gait: apply_idle writes scale.y every frame.
+	var amp := _find_shell(&"sister_amp")
+	if amp != null and amp.get_rig() != null:
+		var scale_y := amp.get_rig().scale.y
+		if absf(scale_y - 1.0) > 0.0001 and absf(scale_y - 1.0) < 0.05:
+			_ok("breathe still driving rig scale (%.4f)" % scale_y)
+		else:
+			_fail("breathe not applied to rig scale (scale.y=%.4f)" % scale_y)
+
+	# The consequence: taking Vex's pass in stage 8 put the warden on watch.
+	var bram := _find_shell(&"warden_bram")
+	if bram == null:
+		_fail("warden bram missing")
+		return
+	if not bram.is_watching():
+		_fail("bram did not react to talk_to_vex")
+		return
+	_ok("bram broke patrol after talk_to_vex")
+
+	var bram_drift := bram.global_position - Vector3(_wander_start.get(&"warden_bram", bram.global_position))
+	bram_drift.y = 0.0
+	if bram_drift.length() > 0.2:
+		_fail("watching warden kept moving (%.2f m)" % bram_drift.length())
+	else:
+		_ok("watching warden holds station")
+
+	var want_yaw := CharacterBuilder.yaw_toward(bram.global_position, _player.global_position)
+	var off := absf(wrapf(bram.rotation.y - want_yaw, -PI, PI))
+	# The player is ~35 m away — far outside the 6.5 m face radius, so this only
+	# passes if watching genuinely ignores the radius.
+	if off > 0.4:
+		_fail("watching warden is not tracking the courier (off by %.2f rad)" % off)
+	else:
+		_ok("watching warden tracks the courier across the plaza (%.2f rad off)" % off)
 
 
 func _begin_jump() -> void:
