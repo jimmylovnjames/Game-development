@@ -36,7 +36,7 @@ signal landed(fall_speed: float)
 @onready var _pivot: Node3D = $CameraPivot
 @onready var _spring_arm: SpringArm3D = $CameraPivot/SpringArm3D
 @onready var _camera: Camera3D = $CameraPivot/SpringArm3D/Camera3D
-@onready var _mesh: MeshInstance3D = $Mesh
+@onready var _visual: Node3D = $Visual
 @onready var _collision: CollisionShape3D = $Collision
 @onready var _interact_ray: RayCast3D = $CameraPivot/SpringArm3D/Camera3D/InteractRay
 @onready var _flashlight: SpotLight3D = $CameraPivot/Flashlight
@@ -120,8 +120,9 @@ func _update_crouch() -> void:
 	if capsule != null:
 		capsule.height = 1.0 if _crouching else 1.8
 		_collision.position.y = capsule.height * 0.5
-	_mesh.scale.y = 0.55 if _crouching else 1.0
-	_pivot.position.y = 1.1 if _crouching else 1.6
+	_visual.scale.y = 0.55 if _crouching else 1.0
+	_visual.position.y = -0.45 if _crouching else 0.0
+	_pivot.position.y = 1.15 if _crouching else 1.65
 
 
 func _is_blocked_overhead() -> bool:
