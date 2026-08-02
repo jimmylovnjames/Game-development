@@ -1,0 +1,29 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://shaders/toon_cel.gdshader" id="1_toon"]
+[ext_resource type="Material" path="res://assets/materials/outline_ink.tres" id="2_ink"]
+
+[resource]
+resource_name = "toon_skin"
+render_priority = 0
+next_pass = ExtResource("2_ink")
+shader = ExtResource("1_toon")
+shader_parameter/albedo_color = Color(0.72,0.52,0.44, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/roughness = 0.55
+shader_parameter/metallic = 0.0
+shader_parameter/light_bands = 3.0
+shader_parameter/band_softness = 0.022
+shader_parameter/shadow_wrap = 0.38
+shader_parameter/shadow_tint = Color(0.26, 0.18, 0.42, 1)
+shader_parameter/shadow_tint_strength = 0.6
+shader_parameter/spec_threshold = 0.58
+shader_parameter/spec_softness = 0.025
+shader_parameter/spec_strength = 0.9
+shader_parameter/rim_color = Color(1.0,0.55,0.72, 1)
+shader_parameter/rim_power = 2.8
+shader_parameter/rim_strength = 1.35
+shader_parameter/rim_light_bias = 0.35
+shader_parameter/emission_color = Color(0,0,0, 1)
+shader_parameter/emission_energy = 0.0
+shader_parameter/grime_strength = 0.08
