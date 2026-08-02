@@ -57,6 +57,25 @@ const SCAFFOLD_SCENE := preload("res://scenes/props/scaffold_frame.tscn")
 @export var sign_light_range: float = 18.0
 @export var street_lamp_energy: float = 2.6
 
+@export_group("Street-level neon")
+## Signage the courier walks past rather than under. Facade signs hang metres
+## above eye line and light rooftops; these sit at 2-4 m, which is the only
+## band that actually puts colour on a face.
+@export_range(0.0, 1.0) var shopfront_chance: float = 0.8
+@export var shopfront_light_energy: float = 3.4
+@export var shopfront_light_range: float = 12.0
+## Kiosks ringing the plaza. The plaza has no buildings by design, so without
+## these the people standing in it have no light source within 25 m.
+##
+## The ring sits *outside* the band the regulars stand in (roughly r 7-13).
+## Pull it inwards and a kiosk light ends up inside somebody, which blows the
+## rig out to a white blob instead of lighting it.
+@export var plaza_kiosk_count: int = 9
+@export var plaza_kiosk_inner: float = 14.5
+@export var plaza_kiosk_outer: float = 19.5
+@export var plaza_kiosk_energy: float = 3.6
+@export var plaza_kiosk_range: float = 15.0
+
 @export_group("Atmosphere")
 ## Fraction of tall towers that carry a holographic ad board.
 @export_range(0.0, 1.0) var holo_board_chance: float = 0.24
@@ -126,6 +145,8 @@ func generate() -> void:
 			_spawn_building(centre, Vector2i(gx, gz))
 
 	_spawn_street_lamps(stride, half)
+	_spawn_shopfronts()
+	_spawn_plaza_kiosks()
 	_spawn_sidewalks(stride, half)
 	_spawn_cables()
 	_spawn_puddles(stride, half)
@@ -198,8 +219,12 @@ func _spawn_sign(building: StaticBody3D, size: Vector3) -> void:
 	var normal: Vector3 = face["normal"]
 	var offset: Vector3 = face["offset"]
 
-	# Signs cluster in the lower third — that is where the player will see them.
-	var local_y := _rng.randf_range(-size.y * 0.35, size.y * 0.15)
+	# Anchor in world space, not as a fraction of building height: the "lower
+	# third" of a 40 m tower is still twelve metres over the courier's head, so
+	# proportional placement quietly pushes every sign out of frame on the tall
+	# buildings — exactly the ones that dominate a street view.
+	var world_y := _rng.randf_range(4.5, 11.0)
+	var local_y := clampf(world_y - size.y * 0.5, -size.y * 0.45, size.y * 0.42)
 
 	var sign_size := Vector3(
 		_rng.randf_range(1.2, 3.2), _rng.randf_range(2.5, 7.0), 0.3
@@ -369,6 +394,231 @@ func _spawn_street_lamps(stride: float, half: float) -> void:
 			light.spot_angle_attenuation = 1.4
 			light.shadow_enabled = false
 			post.add_child(light)
+
+
+## Shopfronts: the neon band at 2-4 m that the courier actually walks through.
+##
+## Facade signage hangs at a fraction of building height, which on a 30 m tower
+## puts it ten metres over your head — it lights the roofline and leaves the
+## pavement black. These sit at eye level with a short-range spill light, so a
+## character standing near one is actually lit by it.
+func _spawn_shopfronts() -> void:
+	var holder := Node3D.new()
+	holder.name = "Shopfronts"
+	add_child(holder)
+
+	for cell: Vector2i in _buildings:
+		if _rng.randf() > shopfront_chance:
+			continue
+		var entry: Dictionary = _buildings[cell]
+		var pos: Vector3 = entry["pos"]
+		var size: Vector3 = entry["size"]
+		var family := _cell_family(cell)
+
+		# Dress the two faces most likely to front a street, not all four —
+		# a building lit on every side reads as a display case.
+		var faces := [Vector3.FORWARD, Vector3.BACK, Vector3.LEFT, Vector3.RIGHT]
+		faces.shuffle()
+		for i in mini(2, faces.size()):
+			var normal: Vector3 = faces[i]
+			var half_depth := (size.z if absf(normal.z) > 0.5 else size.x) * 0.5
+			var span := (size.x if absf(normal.z) > 0.5 else size.z)
+			_make_shopfront(
+				holder,
+				Vector3(pos.x, 0.0, pos.z) + normal * (half_depth + 0.18),
+				normal,
+				span,
+				family,
+			)
+
+
+func _make_shopfront(parent: Node3D, base: Vector3, normal: Vector3, span: float, family: int) -> void:
+	var unit := Node3D.new()
+	unit.position = base
+	unit.rotation.y = atan2(normal.x, normal.z)
+	parent.add_child(unit)
+
+	var fascia_y := _rng.randf_range(2.6, 3.6)
+	var width := clampf(span * _rng.randf_range(0.35, 0.7), 1.6, 6.0)
+
+	# The lit fascia strip over the door.
+	var fascia_size := Vector3(width, _rng.randf_range(0.34, 0.5), 0.16)
+	_make_bezel(unit, fascia_size, Vector3(0.0, fascia_y, 0.0))
+	var fascia := MeshInstance3D.new()
+	var fascia_mesh := BoxMesh.new()
+	fascia_mesh.size = fascia_size
+	fascia.mesh = fascia_mesh
+	fascia.position = Vector3(0.0, fascia_y, 0.06)
+	var neon := _neon_for_family(family, 2.5)
+	fascia.material_override = neon
+	unit.add_child(fascia)
+
+	# A vertical blade sign beside it, on roughly half of them.
+	if _rng.randf() < 0.5:
+		var blade := MeshInstance3D.new()
+		var blade_mesh := BoxMesh.new()
+		blade_mesh.size = Vector3(0.45, _rng.randf_range(1.4, 2.6), 0.12)
+		blade.mesh = blade_mesh
+		blade.position = Vector3(
+			width * 0.5 + 0.4, fascia_y - 0.2, _rng.randf_range(0.12, 0.3)
+		)
+		blade.material_override = _neon_for_family(family + 3, 2.2)
+		unit.add_child(blade)
+
+	# An awning to catch the spill and stop the light climbing the facade.
+	var awning := MeshInstance3D.new()
+	var awning_mesh := BoxMesh.new()
+	awning_mesh.size = Vector3(width + 0.5, 0.1, 0.9)
+	awning.mesh = awning_mesh
+	awning.position = Vector3(0.0, fascia_y - 0.55, 0.5)
+	awning.material_override = METAL_DARK
+	unit.add_child(awning)
+
+	# Short range and pushed off the wall: this is meant to pool on the pavement
+	# in front of the shop, not to floodlight the block.
+	# A spot aimed down and out into the street, not an omni sitting in front of
+	# the facade. An omni this close to a large flat wall paints it as a bright
+	# disc — the same failure the street lamps had, and the reason those became
+	# downward spots. rotation.x below -PI/2 tilts the beam toward +Z (the
+	# street) rather than back into the building.
+	var light := SpotLight3D.new()
+	light.position = Vector3(0.0, fascia_y - 0.25, 0.75)
+	light.rotation.x = -1.9
+	light.light_color = neon.get_shader_parameter("neon_color")
+	light.light_energy = shopfront_light_energy
+	light.spot_range = shopfront_light_range
+	light.spot_angle = 58.0
+	light.spot_angle_attenuation = 1.3
+	light.shadow_enabled = false
+	unit.add_child(light)
+
+
+## Kiosks around the plaza rim.
+##
+## The plaza is deliberately clear of buildings, which means the regulars who
+## stand in it are more than 25 m from the nearest light. These put practical
+## sources inside that gap so the people read as lit characters instead of
+## silhouettes carried entirely by rim light.
+func _spawn_plaza_kiosks() -> void:
+	var holder := Node3D.new()
+	holder.name = "PlazaKiosks"
+	add_child(holder)
+
+	var start := _rng.randf_range(0.0, TAU)
+	for i in plaza_kiosk_count:
+		# Even spacing with jitter, so the ring does not read as a fence.
+		var angle := start + TAU * float(i) / float(plaza_kiosk_count) \
+			+ _rng.randf_range(-0.16, 0.16)
+		var radius := _rng.randf_range(plaza_kiosk_inner, plaza_kiosk_outer)
+		var spot := Vector3(cos(angle) * radius, 0.0, sin(angle) * radius)
+
+		var kiosk := Node3D.new()
+		kiosk.position = spot
+		# Face the plaza centre; the courier arrives from there.
+		kiosk.rotation.y = atan2(-spot.x, -spot.z)
+		holder.add_child(kiosk)
+
+		var family := (i * 4 + int(absf(spot.x))) % 12
+		var neon := _neon_for_family(family)
+
+		var body_h := _rng.randf_range(2.0, 2.6)
+		var body_w := _rng.randf_range(1.5, 2.4)
+
+		var stall := MeshInstance3D.new()
+		var stall_mesh := BoxMesh.new()
+		stall_mesh.size = Vector3(body_w, body_h, 1.1)
+		stall.mesh = stall_mesh
+		stall.position = Vector3(0.0, body_h * 0.5, 0.0)
+		stall.material_override = RUST if _rng.randf() < 0.4 else METAL_DARK
+		kiosk.add_child(stall)
+
+		# Lit counter strip: low, wide, and pointed at the plaza floor.
+		var counter := MeshInstance3D.new()
+		var counter_mesh := BoxMesh.new()
+		counter_mesh.size = Vector3(body_w + 0.3, 0.12, 0.18)
+		counter.mesh = counter_mesh
+		counter.position = Vector3(0.0, 1.15, 0.62)
+		counter.material_override = _neon_for_family(family, 2.9)
+		kiosk.add_child(counter)
+
+		# Sign board above the counter, angled so it reads from the plaza.
+		var board_size := Vector3(body_w * 0.62, _rng.randf_range(0.5, 0.78), 0.1)
+		var board_at := Vector3(0.0, body_h + 0.5, 0.5)
+		_make_bezel(kiosk, board_size, board_at, -0.16)
+		var board := MeshInstance3D.new()
+		var board_mesh := BoxMesh.new()
+		board_mesh.size = board_size
+		board.mesh = board_mesh
+		board.position = board_at + Vector3(0.0, 0.0, 0.06)
+		board.rotation.x = -0.16
+		board.material_override = _neon_for_family(family + 5, 2.5)
+		kiosk.add_child(board)
+
+		var pole := MeshInstance3D.new()
+		var pole_mesh := CylinderMesh.new()
+		pole_mesh.top_radius = 0.05
+		pole_mesh.bottom_radius = 0.06
+		pole_mesh.height = body_h + 0.5
+		pole_mesh.radial_segments = 8
+		pole.mesh = pole_mesh
+		pole.position = Vector3(body_w * 0.42, (body_h + 0.5) * 0.5, 0.5)
+		pole.material_override = METAL_DARK
+		kiosk.add_child(pole)
+
+		# The light that actually lands on people: chest height, aimed inward,
+		# offset off the stall so it does not blow out its own geometry.
+		# Pushed 2.6 m out into the plaza, not tucked against the stall: at a
+		# metre it simply floodlights its own front panel and the people it is
+		# meant to light stay black.
+		var light := OmniLight3D.new()
+		light.position = Vector3(0.0, 1.55, 2.4)
+		light.light_color = neon.get_shader_parameter("neon_color")
+		light.light_energy = plaza_kiosk_energy
+		light.omni_range = plaza_kiosk_range
+		light.omni_attenuation = 1.25
+		light.shadow_enabled = false
+		kiosk.add_child(light)
+
+
+## One neon family per block keeps a street coherent instead of a colour riot.
+##
+## `energy` scales down with panel area on purpose: the emission that reads as a
+## glowing tube on a 0.4 m strip reads as a flat lightbox card on a 2 m board,
+## because an unshaded surface has no shading to lose — only size.
+func _neon_for_family(family: int, energy: float = 2.4) -> ShaderMaterial:
+	var wrapped := family % 12
+	var material: ShaderMaterial = (
+		NEON_MAGENTA if wrapped < 6 else NEON_CYAN
+	).duplicate()
+	if wrapped >= 10:
+		material.set_shader_parameter("neon_color", ACID_YELLOW)
+	elif wrapped == 9:
+		material.set_shader_parameter("neon_color", LAMP_COLOR)
+	material.set_shader_parameter("energy", energy)
+	material.set_shader_parameter("phase_offset", _rng.randf_range(0.0, 100.0))
+	material.set_shader_parameter("dropout_chance", _rng.randf_range(0.0, 0.1))
+	return material
+
+
+## A dark plate a little larger than the lit panel it sits behind. Without it a
+## sign is an edge-to-edge emissive rectangle — the ink outline has nothing to
+## bite on and the panel reads as a flat colour card rather than lit signage.
+##
+## FACING CONVENTION for everything built here: a node yawed with
+## `atan2(d.x, d.z)` — the same form CharacterBuilder.yaw_toward uses — ends up
+## with its **+Z** axis pointing at `d`, not -Z. So local +Z is the visible
+## front, and the bezel goes *behind* the panel at -Z. Get this backwards and
+## the signage renders inside the wall it is mounted on, which looks exactly
+## like a sign that failed to light.
+func _make_bezel(parent: Node3D, panel_size: Vector3, at: Vector3, tilt: float = 0.0) -> void:
+	var bezel := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(panel_size.x + 0.22, panel_size.y + 0.22, panel_size.z * 0.6)
+	bezel.mesh = mesh
+	bezel.position = at - Vector3(0.0, 0.0, 0.07)
+	bezel.rotation.x = tilt
+	bezel.material_override = METAL_DARK
+	parent.add_child(bezel)
 
 
 ## Water tanks, AC units, antennas and pipe runs — the roofline is where the
@@ -1035,12 +1285,14 @@ func _spawn_people() -> void:
 	holder.name = "People"
 	add_child(holder)
 
-	# persona, position, yaw, body scale
+	# Silhouette variety comes from the profile's rig_height / rig_bulk, which
+	# CharacterBuilder applies at build time. Do not scale the rig node here:
+	# apply_idle() writes rig.scale.y every frame and would overwrite it.
 	var placements := [
-		{"profile": PERSONA_MARROW, "pos": Vector3(7.5, 0.0, 3.0), "yaw": -2.2, "scale": Vector3(1.25, 0.92, 1.25)},
-		{"profile": PERSONA_AMP, "pos": Vector3(-4.5, 0.0, 5.5), "yaw": 0.6, "scale": Vector3(0.9, 1.08, 0.9)},
-		{"profile": PERSONA_KIP, "pos": Vector3(10.0, 0.0, -8.0), "yaw": 2.8, "scale": Vector3(0.75, 0.82, 0.75)},
-		{"profile": PERSONA_BRAM, "pos": Vector3(-9.0, 0.0, -7.0), "yaw": -0.4, "scale": Vector3(1.18, 1.0, 1.18)},
+		{"profile": PERSONA_MARROW, "pos": Vector3(7.5, 0.0, 3.0), "yaw": -2.2},
+		{"profile": PERSONA_AMP, "pos": Vector3(-4.5, 0.0, 5.5), "yaw": 0.6},
+		{"profile": PERSONA_KIP, "pos": Vector3(10.0, 0.0, -8.0), "yaw": 2.8},
+		{"profile": PERSONA_BRAM, "pos": Vector3(-9.0, 0.0, -7.0), "yaw": -0.4},
 	]
 	for entry: Dictionary in placements:
 		var shell := SHELL_SCENE.instantiate() as PersonaShell
@@ -1048,9 +1300,6 @@ func _spawn_people() -> void:
 		shell.profile = entry["profile"]
 		shell.position = entry["pos"]
 		shell.rotation.y = entry["yaw"]
-		var mesh := shell.get_node_or_null("Mesh") as MeshInstance3D
-		if mesh != null:
-			mesh.scale = entry["scale"]
 		holder.add_child(shell)
 
 

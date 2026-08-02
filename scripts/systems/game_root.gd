@@ -24,6 +24,9 @@ var _gossip: GossipNetwork
 var _ambience: AmbienceDirector
 var _comic_fx: ComicFX
 var _prompt_label: Label
+var _prompt_panel: PanelContainer
+var _journal_label: Label
+var _journal_panel: PanelContainer
 var _vex: NpcVex
 
 
@@ -57,22 +60,7 @@ func _ready() -> void:
 	_dialogue = DIALOGUE_SCENE.instantiate() as DialogueUI
 	add_child(_dialogue)
 
-	_prompt_label = Label.new()
-	_prompt_label.name = "InteractPrompt"
-	_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_prompt_label.anchor_left = 0.5
-	_prompt_label.anchor_right = 0.5
-	_prompt_label.anchor_top = 0.72
-	_prompt_label.anchor_bottom = 0.72
-	_prompt_label.offset_left = -220.0
-	_prompt_label.offset_right = 220.0
-	_prompt_label.offset_top = -18.0
-	_prompt_label.offset_bottom = 18.0
-	_prompt_label.add_theme_color_override("font_color", Color(0.0, 0.898, 1.0))
-	_prompt_label.add_theme_color_override("font_outline_color", Color(0.02, 0.01, 0.04))
-	_prompt_label.add_theme_constant_override("outline_size", 5)
-	_prompt_label.visible = false
-	$DebugHUD.add_child(_prompt_label)
+	_build_hud()
 
 	_spawn_vex()
 	_bind_persona_shells()
@@ -88,6 +76,89 @@ func _ready() -> void:
 
 	if print_boot_report:
 		call_deferred("_print_boot_report")
+
+
+## --- HUD ------------------------------------------------------------------
+##
+## Everything on screen is drawn as a comic panel: heavy ink border, near-black
+## plum fill, neon only on the type. Flat coloured text floating over the scene
+## was the one element not speaking the game's visual language.
+
+const INK := Color(0.031, 0.02, 0.059)
+const PANEL_FILL := Color(0.043, 0.031, 0.075, 0.88)
+const NEON_CYAN := Color(0.0, 0.898, 1.0)
+const NEON_MAGENTA := Color(1.0, 0.176, 0.584)
+const ACID_YELLOW := Color(0.969, 1.0, 0.235)
+
+
+func _build_hud() -> void:
+	# Interact prompt: a caption box centred low, where the eye already is.
+	var prompt_panel := PanelContainer.new()
+	prompt_panel.name = "InteractPrompt"
+	prompt_panel.anchor_left = 0.5
+	prompt_panel.anchor_right = 0.5
+	prompt_panel.anchor_top = 0.78
+	prompt_panel.anchor_bottom = 0.78
+	prompt_panel.offset_left = -190.0
+	prompt_panel.offset_right = 190.0
+	prompt_panel.offset_top = -26.0
+	prompt_panel.offset_bottom = 26.0
+	prompt_panel.add_theme_stylebox_override("panel", _panel_box(NEON_CYAN))
+	prompt_panel.visible = false
+	$DebugHUD.add_child(prompt_panel)
+
+	_prompt_label = Label.new()
+	_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_ink_type(_prompt_label, NEON_CYAN, 20)
+	prompt_panel.add_child(_prompt_label)
+	_prompt_panel = prompt_panel
+
+	# Journal: its own caption box, top right, away from the debug readout.
+	var journal_panel := PanelContainer.new()
+	journal_panel.name = "JournalPanel"
+	journal_panel.anchor_left = 1.0
+	journal_panel.anchor_right = 1.0
+	journal_panel.anchor_top = 0.0
+	journal_panel.anchor_bottom = 0.0
+	journal_panel.offset_left = -430.0
+	journal_panel.offset_right = -22.0
+	journal_panel.offset_top = 22.0
+	journal_panel.offset_bottom = 200.0
+	journal_panel.add_theme_stylebox_override("panel", _panel_box(ACID_YELLOW))
+	$DebugHUD.add_child(journal_panel)
+
+	_journal_label = Label.new()
+	_journal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_ink_type(_journal_label, ACID_YELLOW, 16)
+	journal_panel.add_child(_journal_label)
+	_journal_panel = journal_panel
+
+	# The debug readout stays a debug readout, but stops floating unstyled.
+	if _debug_label != null:
+		_ink_type(_debug_label, NEON_MAGENTA, 14)
+
+
+## Ink border + near-black plum fill: the panel edge of the style bible, not a
+## translucent grey rectangle.
+func _panel_box(edge: Color) -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = PANEL_FILL
+	box.border_color = INK
+	box.set_border_width_all(4)
+	box.set_corner_radius_all(2)
+	box.set_content_margin_all(12)
+	# A thin neon keyline inside the ink, the way a panel gutter reads.
+	box.shadow_color = Color(edge.r, edge.g, edge.b, 0.32)
+	box.shadow_size = 5
+	return box
+
+
+func _ink_type(label: Label, color: Color, size: int) -> void:
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", INK)
+	label.add_theme_constant_override("outline_size", 6)
+	label.add_theme_font_size_override("font_size", size)
 
 
 func _spawn_vex() -> void:
@@ -140,12 +211,15 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
-	if not _debug_visible or not _debug_label.visible:
+	# The journal is a caption box now, not part of the debug readout, so F3
+	# must not freeze it — but a conversation still owns the whole screen.
+	var talking := _dialogue != null and _dialogue.is_active()
+	if _journal_panel != null:
+		_update_journal(talking)
+	if talking or not _debug_visible or not _debug_label.visible:
 		return
-	if _dialogue != null and _dialogue.is_active():
-		return
+
 	var interactable := _player.get_current_interactable()
-	var journal := "\n".join(_quests.get_journal_lines()) if _quests != null else ""
 	_debug_label.text = "\n".join([
 		"NeonWastesRPG — blockout",
 		"fps      %d" % Engine.get_frames_per_second(),
@@ -158,24 +232,37 @@ func _process(_delta: float) -> void:
 		"grounded %s" % str(_player.is_on_floor()),
 		"target   %s" % ("—" if interactable == null else interactable.name),
 		"",
-		journal,
-		"",
 		"WASD move · Shift sprint · Ctrl crouch · Space jump",
 		"E interact · F flashlight · Esc release mouse · F3 hide",
 	])
+
+
+## Own panel, own visibility: hidden during dialogue so a conversation gets the
+## frame to itself, and hidden entirely when there is no active quest — an empty
+## caption box is worse than no caption box.
+func _update_journal(talking: bool) -> void:
+	if _journal_label == null:
+		return
+	if talking:
+		_journal_panel.visible = false
+		return
+	var journal := "\n".join(_quests.get_journal_lines()) if _quests != null else ""
+	_journal_label.text = journal
+	_journal_panel.visible = not journal.strip_edges().is_empty()
 
 
 func _on_interactable_changed(interactable: Node3D) -> void:
 	if interactable != null:
 		print("[GameRoot] interactable in range: %s" % interactable.name)
 		if _prompt_label != null:
-			var prompt := "E — Interact"
+			var prompt := "Interact"
 			if interactable.has_method("get_prompt"):
-				prompt = "E — %s" % interactable.get_prompt()
-			_prompt_label.text = prompt
-			_prompt_label.visible = true
-	elif _prompt_label != null:
-		_prompt_label.visible = false
+				prompt = interactable.get_prompt()
+			_prompt_label.text = "[ E ]  %s" % prompt.to_upper()
+			if _prompt_panel != null:
+				_prompt_panel.visible = true
+	elif _prompt_panel != null:
+		_prompt_panel.visible = false
 
 
 func _on_landed(fall_speed: float) -> void:
