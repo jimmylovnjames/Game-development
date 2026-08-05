@@ -247,3 +247,15 @@ func _close(completed: bool) -> void:
 		finished.emit(id)
 	else:
 		cancelled.emit(id)
+
+
+## Hard reset for automation. Does not emit finished/cancelled — soak stages
+## use this between setpieces so a leftover panel cannot pause the tree or
+## block the next interact().
+func force_close() -> void:
+	_active = false
+	visible = false
+	_speaker_id = &""
+	_lines = PackedStringArray()
+	_clear_choices()
+	get_tree().paused = false

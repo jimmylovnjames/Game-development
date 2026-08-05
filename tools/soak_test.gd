@@ -669,15 +669,14 @@ var _forger_advances: int = 0
 ## forger's entry condition.
 func _begin_forger() -> void:
 	print("[stage 15: pass forger + read_the_pass]")
+	_force_dialogue_idle()
 	_forger = _scene.get_node_or_null("World/PassForger") as PassForger
 	if _forger == null:
 		_fail("PassForger missing from the world")
 		return
-	_player.global_position = _forger.global_position + Vector3(0.0, 0.2, 1.4)
-	_player.velocity = Vector3.ZERO
-	if _player is PlayerController:
-		(_player as PlayerController).set_look_angles(0.0, -0.1)
-		(_player as PlayerController).camera_distance = 1.0
+	# Stall faces world +X (rotation.y = π/2). Stand on the fascia side and
+	# look back at it — same convention as the gate console.
+	_place_at_interactable(_forger, 1.55)
 
 
 func _try_forger_ray() -> void:
@@ -699,8 +698,11 @@ func _try_forger_ray() -> void:
 		_fail("InteractRay never found the forger within %d frames" % FORGER_RAY_DEADLINE)
 
 	_forger.interact(_player)
-	_forger_opened = true
-	_forger_advances = 0
+	if _dialogue != null and _dialogue.is_active():
+		_forger_opened = true
+		_forger_advances = 0
+	else:
+		_fail("forger interact did not open dialogue")
 
 
 func _drive_forger_dialogue() -> void:
@@ -720,6 +722,7 @@ func _finish_forger() -> void:
 		Input.action_release(_held_action)
 		_held_action = ""
 	Input.action_release("interact")
+	_force_dialogue_idle()
 	if _forger == null:
 		return
 
@@ -764,18 +767,11 @@ func _finish_forger() -> void:
 ## at all, so this stage is the one that proves the first beat has an ending.
 func _begin_gate() -> void:
 	print("[stage 16: spine gate + MQ01 outcome]")
+	_force_dialogue_idle()
 	_gate = _scene.get_node_or_null("World/SpineGate") as SpineGate
 	if _gate == null:
 		_fail("SpineGate missing from the world")
 		return
-	# Stand inside the reach volume, facing the console.
-	# Close enough that the ray, which starts at the camera behind the player,
-	# still reaches the console face 0.55 m inside the gate origin.
-	_player.global_position = _gate.global_position + Vector3(0.0, 0.2, 1.5)
-	_player.velocity = Vector3.ZERO
-	if _player is PlayerController:
-		(_player as PlayerController).set_look_angles(0.0, -0.1)
-		(_player as PlayerController).camera_distance = 1.0
 	# Reset menu-driving state left over from the forger stage.
 	if not _held_action.is_empty():
 		Input.action_release(_held_action)
@@ -785,6 +781,45 @@ func _begin_gate() -> void:
 	_held_action = ""
 	_held_frames = 0
 	_informed_cost_seen = false
+	# Console faces local +Z; with the gate's π/2 yaw that is world +X. Stand
+	# on that side and look back so the ray hits the reader, not a pylon.
+	_place_at_interactable(_gate, 1.6)
+
+
+## Put the courier on the interactable's facing side and aim the camera at it.
+## Both MQ01 setpieces are rotated π/2, so a raw world-Z offset stands beside
+## the console and the ray never sees it.
+func _place_at_interactable(node: Node3D, distance: float) -> void:
+	# Setpieces build the readable face on local +Z (basis.z after rotation).
+	var facing := node.global_transform.basis.z.normalized()
+	# Keep camera_distance + stand-off under interact_range (3 m). The ray
+	# starts at the camera, behind the player — too long a spring and the
+	# console sits past the ray tip even when the body is close enough.
+	_player.global_position = node.global_position + facing * distance + Vector3(0.0, 0.2, 0.0)
+	_player.velocity = Vector3.ZERO
+	_player.global_position += facing * 0.05
+	if _player is PlayerController:
+		var pc := _player as PlayerController
+		# Camera looks along (-sin(yaw), 0, -cos(yaw)). Aim back at the node.
+		var yaw := atan2(facing.x, facing.z)
+		pc.set_look_angles(yaw, -0.12)
+		pc.camera_distance = 1.2
+		pc.force_update_camera()
+
+
+## A leftover open panel from the previous stage pauses the tree and makes the
+## next interactable silently no-op (SpineGate/PassForger both refuse to open
+## over an active dialogue). Close hard before every setpiece stage.
+func _force_dialogue_idle() -> void:
+	if not _held_action.is_empty():
+		Input.action_release(_held_action)
+		_held_action = ""
+	Input.action_release("interact")
+	Input.action_release("move_back")
+	Input.action_release("move_forward")
+	if _dialogue != null:
+		_dialogue.force_close()
+	paused = false
 
 
 ## Poll for the ray rather than sampling one exact frame: the spring arm is
@@ -821,7 +856,10 @@ func _try_gate_ray() -> void:
 		_fail("InteractRay never found the gate console within %d frames" % GATE_RAY_DEADLINE)
 
 	_gate.interact(_player)
-	_gate_opened = true
+	if _dialogue != null and _dialogue.is_active():
+		_gate_opened = true
+	else:
+		_fail("gate interact did not open dialogue")
 
 
 ## Read through the lines, then walk the menu down to the chosen branch and

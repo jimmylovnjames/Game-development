@@ -313,4 +313,16 @@ func get_current_interactable() -> Node3D:
 func set_look_angles(yaw: float, pitch: float) -> void:
 	_yaw = yaw
 	_pitch = clampf(pitch, deg_to_rad(min_pitch_deg), deg_to_rad(max_pitch_deg))
-	_update_camera()
+
+
+## Soak / cutscene helper: apply pivot + spring length now, not on the next
+## physics tick. Without this, a teleport + look leaves InteractRay aimed at
+## wherever the camera was for a frame or two — long enough to miss a deadline.
+func force_update_camera() -> void:
+	_pivot.rotation.y = wrapf(_yaw - rotation.y, -PI, PI)
+	_pivot.rotation.x = _pitch
+	# Snap — _update_camera lerps the spring, which leaves the ray short of a
+	# freshly teleported target for several frames.
+	_spring_arm.spring_length = camera_distance
+	_interact_ray.force_raycast_update()
+	_update_interactable()
