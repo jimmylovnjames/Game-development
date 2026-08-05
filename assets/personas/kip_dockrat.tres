@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="PersonaProfile" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="PersonaProfile" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/characters/knowledge_item.gd" id="1_ki"]
 [ext_resource type="Script" path="res://scripts/characters/persona_profile.gd" id="2_pp"]
@@ -29,6 +29,14 @@ scopes = PackedStringArray("syndicate")
 min_disposition = 0.45
 once_only = true
 
+[sub_resource type="Resource" id="Resource_kip_halcyon"]
+script = ExtResource("1_ki")
+id = &"kip_halcyon"
+text = "Halcyon. The name under your seal. Nix cracked it — whole plaza'll know by morning if you talk too loud. Don't board with their chip in your pocket unless you want to be collected."
+scopes = PackedStringArray("pass", "pass_buyer")
+requires_flag = &"read_the_pass"
+once_only = true
+
 [resource]
 script = ExtResource("2_pp")
 persona_id = &"kip_dockrat"
@@ -42,7 +50,7 @@ body_tint = Color(0.16, 0.18, 0.26, 1)
 persona_prompt = "You are Kip, sixteen-ish, a dock rat who sleeps behind the spine gate's transformer housings and knows the Lowspine by its smells. You are fast, scared, and smarter than everyone assumes. You like the courier because they once gave you a battery instead of chasing you off. You speak in quick bursts, glance over your shoulder mid-sentence, and never finish a story about the Syndicate."
 greeting_lines = PackedStringArray("You're the pass courier. Whole plaza's talking about it. Well. Whispering.", "I didn't take nothing from your crates. This week.")
 deflect_lines = PackedStringArray("I dunno. I don't know anything. Ever.", "Gotta go. Not because of you. Mostly.", "Ask Marrow. He pretends not to know, professionally.")
-forbidden_scopes = PackedStringArray("pass_buyer")
-knowledge = Array[ExtResource("1_ki")]([SubResource("Resource_kip_gate"), SubResource("Resource_kip_rain"), SubResource("Resource_kip_patrol"), SubResource("Resource_kip_syndicate")])
+forbidden_scopes = PackedStringArray()
+knowledge = Array[ExtResource("1_ki")]([SubResource("Resource_kip_gate"), SubResource("Resource_kip_rain"), SubResource("Resource_kip_patrol"), SubResource("Resource_kip_syndicate"), SubResource("Resource_kip_halcyon")])
 bark_interval = 8.0
 chattiness = 0.7

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="PersonaProfile" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="PersonaProfile" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/characters/knowledge_item.gd" id="1_ki"]
 [ext_resource type="Script" path="res://scripts/characters/persona_profile.gd" id="2_pp"]
@@ -30,6 +30,14 @@ requires_flag = &"talk_to_vex"
 grants_flag = &"heard_amp_warning"
 min_disposition = 0.3
 
+[sub_resource type="Resource" id="Resource_amp_halcyon"]
+script = ExtResource("1_ki")
+id = &"amp_halcyon"
+text = "Halcyon Collection. They buy the debts the towers want forgotten, then they collect the faces those debts were attached to. A sacrament with a ledger."
+scopes = PackedStringArray("pass", "pass_buyer")
+requires_flag = &"read_the_pass"
+once_only = true
+
 [resource]
 script = ExtResource("2_pp")
 persona_id = &"sister_amp"
@@ -44,6 +52,6 @@ persona_prompt = "You are Sister Amp of the Neon Choir, a street preacher in Fer
 greeting_lines = PackedStringArray("The Choir sees you, courier. It sees everyone eventually.", "Walk with your debts held high. They're the only thing in this city that's truly yours.")
 deflect_lines = PackedStringArray("Some sermons aren't ready to be heard.", "The Choir keeps its confidences.", "Ask again when you've bled for the answer.")
 forbidden_scopes = PackedStringArray("syndicate")
-knowledge = Array[ExtResource("1_ki")]([SubResource("Resource_amp_cascade"), SubResource("Resource_amp_choir"), SubResource("Resource_amp_signs"), SubResource("Resource_amp_pass")])
+knowledge = Array[ExtResource("1_ki")]([SubResource("Resource_amp_cascade"), SubResource("Resource_amp_choir"), SubResource("Resource_amp_signs"), SubResource("Resource_amp_pass"), SubResource("Resource_amp_halcyon")])
 bark_interval = 13.0
 chattiness = 0.5

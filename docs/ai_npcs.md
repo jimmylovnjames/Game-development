@@ -81,7 +81,10 @@ to say, never through codex dumps.
 
 `tools/soak_test.gd` stage 9 asserts — without any network — that shells exist,
 kernels compose, forbidden scopes deflect, flag-gated knowledge unlocks after
-the Vex beat, and the backend is offline when unconfigured.
+the Vex beat, and the backend is offline when unconfigured. Stage 15 drives
+Nix the pass forger (MQ01's optional `read_the_pass`) and checks that plaza
+knowledge names Halcyon Collection afterwards; stage 16 proves the spine gate
+price list rewrites to match.
 
 ## The rumor mill
 

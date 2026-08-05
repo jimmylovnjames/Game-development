@@ -66,6 +66,14 @@ func get_choice_count() -> int:
 	return _choices.size()
 
 
+## Cost line for the currently selected branch. Soak uses this to prove the
+## optional forger beat rewrote the price list, not just set a flag.
+func get_cost_text() -> String:
+	if _cost_label == null or not _cost_label.visible:
+		return ""
+	return _cost_label.text
+
+
 func set_speaker_color(color: Color) -> void:
 	_speaker.add_theme_color_override("font_color", color)
 

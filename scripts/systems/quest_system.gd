@@ -62,6 +62,13 @@ func notify_flag(flag_id: StringName) -> void:
 	_match(QuestObjective.Kind.FLAG, flag_id)
 
 
+## CUSTOM objectives are completed by a set-piece script, not by a generic
+## world event. The setpiece's interactable_id / target_id is the match key —
+## same pattern as notify_reached, just a different Kind.
+func notify_custom(setpiece_id: StringName) -> void:
+	_match(QuestObjective.Kind.CUSTOM, setpiece_id)
+
+
 func is_objective_done(quest_id: StringName, objective_id: StringName) -> bool:
 	if not _active.has(quest_id):
 		return _completed.has(quest_id)

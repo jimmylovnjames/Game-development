@@ -25,6 +25,8 @@ description = "Find someone who can read the pass without reporting it."
 kind = 6
 target_id = &"setpiece_pass_forger"
 optional = true
+marker_position = Vector3(52, 0, -8)
+has_marker = true
 
 [resource]
 script = ExtResource("2_hlbwa")
@@ -41,6 +43,7 @@ district_id = &"district_lowspine"
 objectives = Array[ExtResource("1_vjc73")]([SubResource("Resource_g1jnn"), SubResource("Resource_myhx6"), SubResource("Resource_grail")])
 flags_on_complete = Array[StringName]([&"mq01_resolved"])
 outcomes = Array[StringName]([&"boarded_with_the_pass", &"sold_the_pass_to_the_syndicate", &"burned_the_pass"])
-outcome_notes = "boarded_with_the_pass — you owe the buyer, and they will collect in Act 2.
-sold_the_pass_to_the_syndicate — solvent, stranded, and the Lowspine remembers.
-burned_the_pass — nobody owns you; nobody helps you either. Locks the spine line."
+outcome_notes = "boarded_with_the_pass — you owe Halcyon Collection, and they will collect in Act 2.
+sold_the_pass_to_the_syndicate — solvent, stranded, and two ledgers just updated.
+burned_the_pass — nobody owns you; Halcyon writes off a purchased debt. Locks the spine line.
+Optional read_the_pass (Nix the forger) does not add a fourth ending — it rewrites the price list so every branch names the buyer."

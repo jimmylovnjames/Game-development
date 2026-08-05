@@ -140,6 +140,8 @@ func _check_prop_scenes() -> void:
 		"res://scenes/props/traffic_cone.tscn",
 		"res://scenes/props/manhole.tscn",
 		"res://scenes/props/scaffold_frame.tscn",
+		"res://scenes/props/spine_gate.tscn",
+		"res://scenes/props/pass_forger.tscn",
 	]:
 		var packed := load(path) as PackedScene
 		if packed == null:
@@ -273,6 +275,10 @@ func _check_main_scene() -> void:
 		"res://scripts/characters/npc_vex.gd",
 		"res://scenes/characters/npc_vex.tscn",
 		"res://scenes/ui/dialogue_ui.tscn",
+		"res://scripts/world/spine_gate.gd",
+		"res://scripts/world/pass_forger.gd",
+		"res://scenes/props/spine_gate.tscn",
+		"res://scenes/props/pass_forger.tscn",
 	]:
 		if load(path) == null:
 			_fail("failed to load %s" % path)

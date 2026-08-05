@@ -197,30 +197,71 @@ func _on_interact(_who: Node3D) -> void:
 	_dialogue.open_with_choices(
 		interactable_id,
 		"Spine Gate",
-		PackedStringArray([
+		_opening_lines(),
+		_choice_list()
+	)
+	_dialogue.set_speaker_color(ACID_YELLOW)
+
+
+func _knows_buyer() -> bool:
+	if _flags != null and _flags.has_flag(&"read_the_pass"):
+		return true
+	if _quests != null and _quests.is_objective_done(QUEST_ID, &"read_the_pass"):
+		return true
+	return false
+
+
+func _opening_lines() -> PackedStringArray:
+	if _knows_buyer():
+		return PackedStringArray([
 			"The reader wants the pass. Above it, a camera that has not been cleaned in a decade wants your face.",
-			"There is a man at the barrier who has been watching you walk the whole length of the street. He has the patient look of somebody paid by the hour to wait.",
-			"\"Sealed pass,\" he says. \"I can read the name on that. So can the people who bought it. Question is who gets to.\"",
-		]),
-		[
+			"The man at the barrier has been watching you walk the whole length of the street. He has the patient look of somebody paid by the hour to wait.",
+			"\"Sealed pass,\" he says. \"Halcyon Collection seal. I can read that. So can they. Question is who gets to.\"",
+		])
+	return PackedStringArray([
+		"The reader wants the pass. Above it, a camera that has not been cleaned in a decade wants your face.",
+		"There is a man at the barrier who has been watching you walk the whole length of the street. He has the patient look of somebody paid by the hour to wait.",
+		"\"Sealed pass,\" he says. \"I can read the name on that. So can the people who bought it. Question is who gets to.\"",
+	])
+
+
+## Optional content must change the price list, not add a fourth clean path.
+func _choice_list() -> Array[Dictionary]:
+	if _knows_buyer():
+		return [
 			{
 				"id": OUTCOME_BOARD,
 				"text": "Feed the pass to the reader and board.",
-				"cost": "You go through. Whoever paid your debt now knows where you are, and they will come to collect in their own time.",
+				"cost": "You go through. Halcyon Collection logs the face that boarded on their seal, and they collect in person.",
 			},
 			{
 				"id": OUTCOME_SELL,
 				"text": "Sell the pass to the man at the barrier.",
-				"cost": "You eat tonight and for a month. You stay in the Lowspine, and the Lowspine watches you take the money.",
+				"cost": "You eat tonight. The Syndicate gets a Halcyon seal, and Halcyon notices the moment the chip moves without a boarding.",
 			},
 			{
 				"id": OUTCOME_BURN,
 				"text": "Burn it in front of him.",
-				"cost": "Nobody owns a piece of your morning. Nobody helps you either, and the spine line closes to you for good.",
+				"cost": "Nobody owns a piece of your morning. Halcyon writes off a purchased debt as ash — and they keep ledgers of write-offs.",
 			},
 		]
-	)
-	_dialogue.set_speaker_color(ACID_YELLOW)
+	return [
+		{
+			"id": OUTCOME_BOARD,
+			"text": "Feed the pass to the reader and board.",
+			"cost": "You go through. Whoever paid your debt now knows where you are, and they will come to collect in their own time.",
+		},
+		{
+			"id": OUTCOME_SELL,
+			"text": "Sell the pass to the man at the barrier.",
+			"cost": "You eat tonight and for a month. You stay in the Lowspine, and the Lowspine watches you take the money.",
+		},
+		{
+			"id": OUTCOME_BURN,
+			"text": "Burn it in front of him.",
+			"cost": "Nobody owns a piece of your morning. Nobody helps you either, and the spine line closes to you for good.",
+		},
+	]
 
 
 func _on_choice_made(speaker_id: StringName, choice_id: StringName) -> void:
@@ -287,11 +328,18 @@ func _burst(word: String, style: String) -> void:
 func _epilogue_line() -> String:
 	if _flags == null:
 		return "The reader is dark."
+	var informed := _knows_buyer()
 	if _flags.has_flag(OUTCOME_BOARD):
+		if informed:
+			return "The barrier is open. Halcyon Collection already knows which face boarded on their seal."
 		return "The barrier is open. Somewhere down the line, somebody is expecting you."
 	if _flags.has_flag(OUTCOME_SELL):
+		if informed:
+			return "The man is gone with a Halcyon seal. Your pockets are heavier and two ledgers just updated."
 		return "The man is gone and so is the pass. Your pockets are heavier and the street knows it."
 	if _flags.has_flag(OUTCOME_BURN):
+		if informed:
+			return "Ash on the reader plate. Halcyon will find the write-off. The gate does not open for you again."
 		return "Ash on the reader plate. The gate does not open for you again."
 	return "The reader is dark."
 

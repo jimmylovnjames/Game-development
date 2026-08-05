@@ -29,6 +29,9 @@ const WANDER_FRAMES := 660
 const GATE_REACH_FRAMES := 24
 const GATE_RAY_DEADLINE := 90
 const GATE_FRAMES := 220
+const FORGER_RAY_DEADLINE := 90
+const FORGER_FRAMES := 160
+const FORGER_DIALOGUE_LINES := 5
 ## Index 1 of the gate's three outcomes: sell the pass. Chosen for the test
 ## because reaching it needs the menu to actually navigate, not just confirm.
 const GATE_CHOICE_INDEX := 1
@@ -154,6 +157,16 @@ func _physics_process(_delta: float) -> bool:
 				_finish_wander_check()
 				_next_stage()
 		15:
+			if _stage_frame == 2:
+				_begin_forger()
+			elif not _forger_opened and _stage_frame > 8:
+				_try_forger_ray()
+			elif _forger_opened and not _forger_done:
+				_drive_forger_dialogue()
+			if _stage_frame >= FORGER_FRAMES:
+				_finish_forger()
+				_next_stage()
+		16:
 			if _stage_frame == 2:
 				_begin_gate()
 			elif not _gate_opened and _stage_frame > GATE_REACH_FRAMES:
@@ -642,13 +655,115 @@ var _gate_committed: bool = false
 var _held_action: String = ""
 var _held_frames: int = 0
 var _gate_outcome: StringName = &""
+var _informed_cost_seen: bool = false
+
+var _forger: PassForger = null
+var _forger_ray_ok: bool = false
+var _forger_opened: bool = false
+var _forger_done: bool = false
+var _forger_advances: int = 0
+
+
+## Optional MQ01 setpiece: crack the seal before the gate so the price list
+## becomes specific. Stage 8 already completed talk_to_vex, which is the
+## forger's entry condition.
+func _begin_forger() -> void:
+	print("[stage 15: pass forger + read_the_pass]")
+	_forger = _scene.get_node_or_null("World/PassForger") as PassForger
+	if _forger == null:
+		_fail("PassForger missing from the world")
+		return
+	_player.global_position = _forger.global_position + Vector3(0.0, 0.2, 1.4)
+	_player.velocity = Vector3.ZERO
+	if _player is PlayerController:
+		(_player as PlayerController).set_look_angles(0.0, -0.1)
+		(_player as PlayerController).camera_distance = 1.0
+
+
+func _try_forger_ray() -> void:
+	if _forger == null or _forger_opened:
+		return
+
+	var target: Node3D = null
+	if _player.has_method("get_current_interactable"):
+		target = _player.get_current_interactable() as Node3D
+
+	if target == _forger:
+		_forger_ray_ok = true
+	elif _stage_frame < FORGER_RAY_DEADLINE:
+		return
+
+	if _forger_ray_ok:
+		_ok("InteractRay locked onto Nix's stall after %d frames" % _stage_frame)
+	else:
+		_fail("InteractRay never found the forger within %d frames" % FORGER_RAY_DEADLINE)
+
+	_forger.interact(_player)
+	_forger_opened = true
+	_forger_advances = 0
+
+
+func _drive_forger_dialogue() -> void:
+	if _dialogue == null or _forger == null or _forger_done:
+		return
+	if not _dialogue.is_active():
+		_forger_done = true
+		return
+	if _tap("interact"):
+		_forger_advances += 1
+		if _forger_advances >= FORGER_DIALOGUE_LINES + 1:
+			_forger_done = true
+
+
+func _finish_forger() -> void:
+	if not _held_action.is_empty():
+		Input.action_release(_held_action)
+		_held_action = ""
+	Input.action_release("interact")
+	if _forger == null:
+		return
+
+	if not _forger_opened:
+		_fail("forger dialogue never opened")
+		return
+
+	if _forger.has_read_the_pass():
+		_ok("Nix cracked the seal")
+	else:
+		_fail("forger never marked the pass as read")
+		return
+
+	if _quests != null and _quests.is_objective_done(
+		&"mq01_the_transit_pass", &"read_the_pass"
+	):
+		_ok("read_the_pass optional objective completed")
+	else:
+		_fail("read_the_pass objective did not complete")
+
+	var flags := _scene.get_node_or_null("WorldFlags") as WorldFlags
+	if flags != null and flags.has_flag(&"read_the_pass"):
+		_ok("read_the_pass world flag set")
+	else:
+		_fail("read_the_pass world flag missing")
+
+	# Plaza knowledge opens once the seal is cracked — that is how the optional
+	# beat lands in the district, not only on the journal.
+	var amp := _find_shell(&"sister_amp")
+	if amp != null:
+		var reply: Dictionary = amp.answer_about(&"pass_buyer")
+		if reply.get("deflected", true):
+			_fail("Sister Amp still deflects pass_buyer after the seal is read")
+		elif "Halcyon" in str(reply.get("text", "")):
+			_ok("Sister Amp names Halcyon Collection after the reveal")
+		else:
+			_fail("Sister Amp's pass_buyer reply did not name Halcyon")
 
 
 ## MQ01 end to end: walk into the gate volume, read the reader, and take one of
 ## the three branches. Before the gate existed the quest could not be finished
 ## at all, so this stage is the one that proves the first beat has an ending.
 func _begin_gate() -> void:
-	print("[stage 15: spine gate + MQ01 outcome]")
+	print("[stage 16: spine gate + MQ01 outcome]")
 	_gate = _scene.get_node_or_null("World/SpineGate") as SpineGate
 	if _gate == null:
 		_fail("SpineGate missing from the world")
@@ -661,6 +776,15 @@ func _begin_gate() -> void:
 	if _player is PlayerController:
 		(_player as PlayerController).set_look_angles(0.0, -0.1)
 		(_player as PlayerController).camera_distance = 1.0
+	# Reset menu-driving state left over from the forger stage.
+	if not _held_action.is_empty():
+		Input.action_release(_held_action)
+	_gate_ray_ok = false
+	_gate_opened = false
+	_gate_committed = false
+	_held_action = ""
+	_held_frames = 0
+	_informed_cost_seen = false
 
 
 ## Poll for the ray rather than sampling one exact frame: the spring arm is
@@ -714,6 +838,13 @@ func _drive_gate_dialogue() -> void:
 	if not _dialogue.is_choosing():
 		_tap("interact")
 		return
+
+	# Optional beat consequence: the cost line names Halcyon once Nix has read
+	# the seal. A menu that still shows the uninformed prices would pass every
+	# other check and still leave the forger content dead.
+	var cost := _dialogue.get_cost_text()
+	if "Halcyon" in cost:
+		_informed_cost_seen = true
 
 	if _dialogue.get_selected_index() != GATE_CHOICE_INDEX:
 		_tap("move_back")
@@ -795,6 +926,11 @@ func _finish_gate() -> void:
 		_fail("expected outcome \'%s\' at menu index %d, got \'%s\'" % [
 			SpineGate.OUTCOME_SELL, GATE_CHOICE_INDEX, _gate_outcome,
 		])
+
+	if _informed_cost_seen:
+		_ok("gate price list named Halcyon after the forger reveal")
+	else:
+		_fail("gate still showed the uninformed price list")
 
 	var flags := _scene.get_node_or_null("WorldFlags") as WorldFlags
 	if flags != null and flags.has_flag(_gate_outcome):

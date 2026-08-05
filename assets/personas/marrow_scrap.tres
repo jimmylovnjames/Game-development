@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="PersonaProfile" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="PersonaProfile" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/characters/knowledge_item.gd" id="1_ki"]
 [ext_resource type="Script" path="res://scripts/characters/persona_profile.gd" id="2_pp"]
@@ -28,6 +28,15 @@ text = "I don't touch sealed passes. I know what they sell for and I know better
 scopes = PackedStringArray("pass")
 min_disposition = 0.35
 
+[sub_resource type="Resource" id="Resource_marrow_halcyon"]
+script = ExtResource("1_ki")
+id = &"marrow_halcyon"
+text = "Halcyon Collection. They don't haggle. They don't forget. If your seal says their name, you already spent the favour."
+scopes = PackedStringArray("pass", "pass_buyer")
+requires_flag = &"read_the_pass"
+min_disposition = 0.3
+once_only = true
+
 [resource]
 script = ExtResource("2_pp")
 persona_id = &"marrow_scrap"
@@ -41,7 +50,7 @@ body_tint = Color(0.32, 0.2, 0.13, 1)
 persona_prompt = "You are Marrow, a heavyset scrap vendor in the Lowspine district of Ferrum Halo, forty years after the Cascade. You survived by knowing prices and knowing when to stop asking. You like the courier — they haggle honestly, which nobody does anymore. You speak in short, warm sentences with trader's rhythm, and you never give information without complaining about what it costs you."
 greeting_lines = PackedStringArray("Courier. Buy something or sell something, the rain doesn't care either way.", "You've got the look of someone the city just did a favor. Those come with teeth.")
 deflect_lines = PackedStringArray("Not my stall, not my business.", "Ask the spine. It answers louder than me.", "I sell scrap, not stories.")
-forbidden_scopes = PackedStringArray("pass_buyer")
-knowledge = Array[ExtResource("1_ki")]([SubResource("Resource_marrow_prices"), SubResource("Resource_marrow_buyers"), SubResource("Resource_marrow_vex"), SubResource("Resource_marrow_pass")])
+forbidden_scopes = PackedStringArray()
+knowledge = Array[ExtResource("1_ki")]([SubResource("Resource_marrow_prices"), SubResource("Resource_marrow_buyers"), SubResource("Resource_marrow_vex"), SubResource("Resource_marrow_pass"), SubResource("Resource_marrow_halcyon")])
 bark_interval = 11.0
 chattiness = 0.65

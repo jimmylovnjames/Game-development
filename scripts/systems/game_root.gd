@@ -9,9 +9,13 @@ extends Node3D
 const VEX_SCENE := preload("res://scenes/characters/npc_vex.tscn")
 const DIALOGUE_SCENE := preload("res://scenes/ui/dialogue_ui.tscn")
 const SPINE_GATE_SCENE := preload("res://scenes/props/spine_gate.tscn")
+const PASS_FORGER_SCENE := preload("res://scenes/props/pass_forger.tscn")
 ## Matches the marker on mq01's reach_spine_gate objective: the far end of a
 ## street on the district's north-east edge, a real walk from the plaza.
 const SPINE_GATE_POSITION := Vector3(96.0, 0.0, -42.0)
+## Off the east kerb toward the gate — findable without being on the walking
+## line. Optional objectives that sit on the critical path stop being optional.
+const PASS_FORGER_POSITION := Vector3(52.0, 0.0, -8.0)
 
 @export var print_boot_report: bool = true
 
@@ -34,6 +38,7 @@ var _journal_label: Label
 var _journal_panel: PanelContainer
 var _vex: NpcVex
 var _spine_gate: SpineGate
+var _pass_forger: PassForger
 
 
 func _ready() -> void:
@@ -77,6 +82,7 @@ func _ready() -> void:
 	_build_hud()
 
 	_spawn_vex()
+	_spawn_pass_forger()
 	_spawn_spine_gate()
 	_bind_persona_shells()
 
@@ -185,6 +191,19 @@ func _spawn_vex() -> void:
 	_vex.bind(_dialogue, _quests)
 
 
+## Optional MQ01 setpiece: crack the sealed pass before the gate. Completing it
+## does not add a fourth ending — it rewrites the price list on the three that
+## already exist.
+func _spawn_pass_forger() -> void:
+	_pass_forger = PASS_FORGER_SCENE.instantiate() as PassForger
+	_pass_forger.name = "PassForger"
+	_pass_forger.position = PASS_FORGER_POSITION
+	# Face the street so the fascia reads from the walking line.
+	_pass_forger.rotation.y = PI * 0.5
+	$World.add_child(_pass_forger)
+	_pass_forger.bind(_dialogue, _quests, _flags, _comic_fx)
+
+
 ## MQ01's destination. Without it the quest has three outcomes and no way to
 ## reach any of them — the first story beat literally cannot end.
 func _spawn_spine_gate() -> void:
@@ -221,6 +240,9 @@ func _print_boot_report() -> void:
 	print("  main scene    : %s" % scene_file_path)
 	print("  player at     : %s" % str(_player.global_position))
 	print("  vex at        : %s" % str(_vex.global_position if _vex else Vector3.ZERO))
+	print("  pass forger at: %s" % str(
+		_pass_forger.global_position if _pass_forger else Vector3.ZERO
+	))
 	print("  spine gate at : %s" % str(
 		_spine_gate.global_position if _spine_gate else Vector3.ZERO
 	))
