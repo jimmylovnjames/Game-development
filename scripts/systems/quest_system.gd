@@ -75,6 +75,29 @@ func is_objective_done(quest_id: StringName, objective_id: StringName) -> bool:
 	return bool(_active[quest_id]["done"].get(objective_id, false))
 
 
+## The first unfinished required objective that carries a world marker.
+##
+## QuestObjective has had has_marker / marker_position since it was authored and
+## nothing read them, so the courier was told to go to the spine gate with no
+## indication of where that is — a hundred metres away across a district with no
+## map. Data that nothing consumes is the same as data that does not exist.
+func get_active_marker() -> Dictionary:
+	for entry: Dictionary in _active.values():
+		var quest: Quest = entry["quest"]
+		var done: Dictionary = entry["done"]
+		for objective in quest.objectives:
+			if done.get(objective.id, false) or objective.optional:
+				continue
+			if not objective.has_marker:
+				continue
+			return {
+				"has": true,
+				"position": objective.marker_position,
+				"label": objective.description,
+			}
+	return {"has": false, "position": Vector3.ZERO, "label": ""}
+
+
 ## Which outcome a finished quest ended on, or &"" if it is not finished.
 ## The world needs this to keep showing the consequence after the fact.
 func get_outcome(quest_id: StringName) -> StringName:

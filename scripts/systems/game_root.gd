@@ -36,6 +36,7 @@ var _prompt_label: Label
 var _prompt_panel: PanelContainer
 var _journal_label: Label
 var _journal_panel: PanelContainer
+var _objective_marker: ObjectiveMarker
 var _vex: NpcVex
 var _spine_gate: SpineGate
 var _pass_forger: PassForger
@@ -90,6 +91,10 @@ func _ready() -> void:
 	_player.interactable_changed.connect(_on_interactable_changed)
 	_player.landed.connect(_on_landed)
 	_player.add_to_group("player")
+
+	if _objective_marker != null:
+		_objective_marker.quests = _quests
+		_objective_marker.player = _player
 
 	var storm := get_node_or_null("StormDirector") as StormDirector
 	if storm != null:
@@ -154,6 +159,13 @@ func _build_hud() -> void:
 	_ink_type(_journal_label, ACID_YELLOW, 16)
 	journal_panel.add_child(_journal_label)
 	_journal_panel = journal_panel
+
+	# Waypoint chevron. Full-rect and non-interactive, under the panels so a
+	# caption box always wins where they overlap.
+	_objective_marker = ObjectiveMarker.new()
+	_objective_marker.name = "ObjectiveMarker"
+	$DebugHUD.add_child(_objective_marker)
+	$DebugHUD.move_child(_objective_marker, 0)
 
 	# The debug readout stays a debug readout, but stops floating unstyled.
 	if _debug_label != null:

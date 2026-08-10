@@ -372,6 +372,25 @@ func _check_quests() -> void:
 		else:
 			for warning: String in warnings:
 				_fail("%s: %s" % [path.get_file(), warning])
+		_check_quest_markers(quest)
+
+
+## A marker that does not line up with the thing it points at sends the player
+## to empty tarmac, and nothing else in the build would notice.
+func _check_quest_markers(quest: Quest) -> void:
+	for objective in quest.objectives:
+		if not objective.has_marker:
+			continue
+		if objective.target_id != &"trigger_spine_gate":
+			continue
+		var offset := objective.marker_position.distance_to(GameRoot.SPINE_GATE_POSITION)
+		if offset > 2.0:
+			_fail("objective \'%s\' marks %s but the gate spawns at %s (%.1f m apart)" % [
+				objective.id, str(objective.marker_position),
+				str(GameRoot.SPINE_GATE_POSITION), offset,
+			])
+		else:
+			_ok("marker for \'%s\' lines up with the spine gate" % objective.id)
 
 
 func _list_files(dir_path: String, suffix: String) -> Array[String]:
