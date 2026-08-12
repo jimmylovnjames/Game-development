@@ -1,0 +1,15 @@
+[gd_resource type="GradientTexture1D" load_steps=2 format=3]
+
+; Skin ramp — same three-band comic steps as ramp_character, but the mid and
+; lit ends run warmer so flesh reads as flesh under neon rather than as grey
+; cloth with a skin-coloured albedo.
+
+[sub_resource type="Gradient" id="Gradient_skin"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.4, 0.7)
+colors = PackedColorArray(0.28, 0.18, 0.38, 1, 0.72, 0.58, 0.62, 1, 0.96, 0.9, 0.84, 1)
+
+[resource]
+resource_name = "ramp_skin"
+gradient = SubResource("Gradient_skin")
+width = 64
