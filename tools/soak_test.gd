@@ -533,11 +533,21 @@ func _begin_rig_check() -> void:
 		if head == null:
 			_fail("%s rig has no head" % entry["name"])
 			rig_failures += 1
-		elif rig.get_child_count() < 12:
+			continue
+		if rig.get_child_count() < 12:
 			_fail("%s rig is too simple (%d parts)" % [entry["name"], rig.get_child_count()])
 			rig_failures += 1
+		# Face planes and limb joints are the detail budget — a bare sphere head
+		# or single-cylinder limbs means the character builder regressed.
+		if head.get_child_count() < 5:
+			_fail("%s head lacks face detail (%d children)" % [entry["name"], head.get_child_count()])
+			rig_failures += 1
+		var leg := rig.get_node_or_null("LegL") as Node3D
+		if leg == null or leg.get_child_count() < 4:
+			_fail("%s missing articulated leg" % entry["name"])
+			rig_failures += 1
 	if rig_failures == 0:
-		_ok("six rigs assembled with heads, eyes, and costume parts")
+		_ok("six rigs assembled with heads, face planes, and articulated limbs")
 
 	# Put the courier in front of Marrow and give the shell time to turn.
 	_rig_marrow = _find_shell(&"marrow_scrap")

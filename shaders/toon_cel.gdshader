@@ -60,11 +60,20 @@ uniform float grime_strength : hint_range(0.0, 1.0) = 0.0;
 // Grime pools downward: 1.0 restricts it to upward-facing surfaces.
 uniform float grime_up_bias : hint_range(0.0, 1.0) = 0.0;
 
+group_uniforms Detail;
+// Soft tonal flecks for skin and fabric. Reads as ink-wash variation, not
+// photographic noise — keep strength low so banding still owns the look.
+uniform float detail_strength : hint_range(0.0, 0.4) = 0.0;
+uniform float detail_scale : hint_range(0.5, 48.0) = 10.0;
+uniform float detail_contrast : hint_range(0.0, 1.0) = 0.55;
+
 varying float v_fresnel;
 varying vec3 v_world_normal;
+varying vec3 v_world_pos;
 
 void vertex() {
 	v_world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	v_world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 
 void fragment() {
@@ -75,6 +84,18 @@ void fragment() {
 	float grime = texture(grime_texture, uv).r * grime_strength;
 	grime *= mix(1.0, clamp(v_world_normal.y, 0.0, 1.0), grime_up_bias);
 	base = mix(base, grime_color.rgb, grime);
+
+	if (detail_strength > 0.001) {
+		float n1 = cel_value_noise11(
+			v_world_pos.x * detail_scale + v_world_pos.z * detail_scale * 0.73
+		);
+		float n2 = cel_value_noise11(
+			v_world_pos.y * detail_scale * 1.31 - v_world_pos.x * detail_scale * 0.41
+		);
+		float fleck = mix(n1, n2, 0.45);
+		fleck = mix(0.5, fleck, detail_contrast);
+		base *= mix(1.0, 0.74 + fleck * 0.52, detail_strength);
+	}
 
 	ALBEDO = base;
 	ALPHA = albedo_color.a * tex.a;
