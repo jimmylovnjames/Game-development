@@ -71,6 +71,10 @@ var _time_since_jump_pressed: float = INF
 var _was_on_floor: bool = true
 var _current_interactable: Node3D = null
 var _crouching: bool = false
+var _rig: Node3D = null
+var _idle_time: float = 0.0
+var _stride_phase: float = 0.0
+var _stride_amount: float = 0.0
 
 
 func _ready() -> void:
@@ -80,7 +84,8 @@ func _ready() -> void:
 	floor_snap_length = snap_length
 	floor_max_angle = deg_to_rad(max_slope_deg)
 	_yaw = rotation.y
-	_mesh.add_child(CharacterBuilder.build(&"courier", 1.78, 1.0))
+	_rig = CharacterBuilder.build(&"courier", 1.78, 1.0)
+	_mesh.add_child(_rig)
 	_capture_mouse(true)
 
 
@@ -127,6 +132,19 @@ func _physics_process(delta: float) -> void:
 	_detect_landing()
 	_update_interactable()
 	_poll_interact()
+	_update_character_animation(delta)
+
+
+func _update_character_animation(delta: float) -> void:
+	if _rig == null:
+		return
+	_idle_time += delta
+	CharacterBuilder.apply_idle(_rig, _idle_time, 0.75)
+	var horiz := Vector2(velocity.x, velocity.z).length()
+	var target_stride := 0.0 if not is_on_floor() else clampf(horiz / walk_speed, 0.0, 1.0)
+	_stride_amount = move_toward(_stride_amount, target_stride, 4.0 * delta)
+	_stride_phase += delta * (3.0 + horiz * 3.5) * _stride_amount
+	CharacterBuilder.apply_gait(_rig, _stride_phase, _stride_amount)
 
 
 func _poll_interact() -> void:
