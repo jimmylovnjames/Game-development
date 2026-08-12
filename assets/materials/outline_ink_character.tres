@@ -1,0 +1,16 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/outline_hull.gdshader" id="1_outline"]
+
+[resource]
+resource_name = "outline_ink_character"
+render_priority = 0
+shader = ExtResource("1_outline")
+shader_parameter/outline_color = Color(0.03, 0.02, 0.06, 1)
+; Thinner than architecture ink so jaw / fingers / pockets survive close-ups
+; instead of filling in as a black blob.
+shader_parameter/outline_width = 0.0022
+shader_parameter/constant_screen_width = true
+shader_parameter/max_scale_distance = 80.0
+shader_parameter/fade_start = 60.0
+shader_parameter/fade_end = 140.0

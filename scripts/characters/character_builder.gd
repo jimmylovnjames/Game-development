@@ -15,7 +15,7 @@ extends RefCounted
 
 const TOON := preload("res://shaders/toon_cel.gdshader")
 const NEON := preload("res://shaders/neon_sign.gdshader")
-const INK := preload("res://assets/materials/outline_ink.tres")
+const INK := preload("res://assets/materials/outline_ink_character.tres")
 ## Authored 3-band light ramp. Characters get the ramp rather than the numeric
 ## banding so the shadow end can drift cold violet and the lit end warm — a hue
 ## shift across the terminator that a band count cannot express.
@@ -33,13 +33,15 @@ const FEATURES := {
 
 ## Default palettes per archetype: coat / trim (accent + rim) / skin / eyes.
 ## Saturated colour lives in trim and eyes only — the style bible's rule.
+## Coat values sit a notch above pure ink so layered pockets / lapels read
+## under neon instead of collapsing into one silhouette hole.
 const PALETTES := {
-	&"fixer": [Color(0.1, 0.11, 0.15), Color(1.0, 0.176, 0.584), Color(0.72, 0.66, 0.79), Color(1.0, 0.176, 0.584)],
-	&"vendor": [Color(0.23, 0.14, 0.09), Color(1.0, 0.68, 0.36), Color(0.79, 0.66, 0.55), Color(1.0, 0.68, 0.36)],
-	&"preacher": [Color(0.07, 0.07, 0.1), Color(0.969, 1.0, 0.235), Color(0.61, 0.56, 0.72), Color(0.969, 1.0, 0.235)],
-	&"urchin": [Color(0.11, 0.13, 0.19), Color(0.0, 0.898, 1.0), Color(0.72, 0.6, 0.52), Color(0.0, 0.898, 1.0)],
-	&"warden": [Color(0.14, 0.13, 0.1), Color(0.56, 0.66, 0.78), Color(0.66, 0.6, 0.56), Color(0.56, 0.66, 0.78)],
-	&"courier": [Color(0.09, 0.13, 0.17), Color(0.0, 0.898, 1.0), Color(0.72, 0.66, 0.79), Color(0.0, 0.898, 1.0)],
+	&"fixer": [Color(0.16, 0.17, 0.22), Color(1.0, 0.176, 0.584), Color(0.82, 0.74, 0.86), Color(1.0, 0.176, 0.584)],
+	&"vendor": [Color(0.28, 0.18, 0.12), Color(1.0, 0.68, 0.36), Color(0.88, 0.74, 0.62), Color(1.0, 0.68, 0.36)],
+	&"preacher": [Color(0.12, 0.12, 0.16), Color(0.969, 1.0, 0.235), Color(0.72, 0.66, 0.8), Color(0.969, 1.0, 0.235)],
+	&"urchin": [Color(0.16, 0.18, 0.26), Color(0.0, 0.898, 1.0), Color(0.84, 0.7, 0.6), Color(0.0, 0.898, 1.0)],
+	&"warden": [Color(0.2, 0.19, 0.15), Color(0.56, 0.66, 0.78), Color(0.76, 0.68, 0.62), Color(0.56, 0.66, 0.78)],
+	&"courier": [Color(0.14, 0.18, 0.24), Color(0.0, 0.898, 1.0), Color(0.82, 0.74, 0.86), Color(0.0, 0.898, 1.0)],
 }
 
 
@@ -411,7 +413,7 @@ static func _skin(color: Color, rim: Color) -> ShaderMaterial:
 	mat.set_shader_parameter("albedo_color", color)
 	mat.set_shader_parameter("roughness", 0.72)
 	mat.set_shader_parameter("rim_color", rim)
-	mat.set_shader_parameter("rim_strength", 0.95)
+	mat.set_shader_parameter("rim_strength", 1.15)
 	mat.set_shader_parameter("rim_power", 2.8)
 	mat.set_shader_parameter("rim_light_bias", 0.4)
 	mat.set_shader_parameter("shadow_wrap", 0.55)
@@ -419,8 +421,8 @@ static func _skin(color: Color, rim: Color) -> ShaderMaterial:
 	mat.set_shader_parameter("spec_strength", 0.28)
 	mat.set_shader_parameter("spec_threshold", 0.72)
 	mat.set_shader_parameter("spec_softness", 0.08)
-	mat.set_shader_parameter("skin_mottle", 0.22)
-	mat.set_shader_parameter("skin_mottle_scale", 9.0)
+	mat.set_shader_parameter("skin_mottle", 0.28)
+	mat.set_shader_parameter("skin_mottle_scale", 8.0)
 	mat.set_shader_parameter("light_ramp", LIGHT_RAMP)
 	mat.set_shader_parameter("use_light_ramp", true)
 	return mat
