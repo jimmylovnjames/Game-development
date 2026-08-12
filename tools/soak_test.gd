@@ -533,11 +533,17 @@ func _begin_rig_check() -> void:
 		if head == null:
 			_fail("%s rig has no head" % entry["name"])
 			rig_failures += 1
+		elif head.get_node_or_null("FacePlate") == null or head.get_node_or_null("Jaw") == null:
+			_fail("%s head is missing face detail (FacePlate/Jaw)" % entry["name"])
+			rig_failures += 1
+		elif rig.get_node_or_null("LegL/Thigh") == null or rig.get_node_or_null("ArmL/Hand") == null:
+			_fail("%s limbs are not articulated (expected LegL/Thigh, ArmL/Hand)" % entry["name"])
+			rig_failures += 1
 		elif rig.get_child_count() < 12:
 			_fail("%s rig is too simple (%d parts)" % [entry["name"], rig.get_child_count()])
 			rig_failures += 1
 	if rig_failures == 0:
-		_ok("six rigs assembled with heads, eyes, and costume parts")
+		_ok("six rigs assembled with face detail, articulated limbs, and costume parts")
 
 	# Put the courier in front of Marrow and give the shell time to turn.
 	_rig_marrow = _find_shell(&"marrow_scrap")

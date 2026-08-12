@@ -60,11 +60,22 @@ uniform float grime_strength : hint_range(0.0, 1.0) = 0.0;
 // Grime pools downward: 1.0 restricts it to upward-facing surfaces.
 uniform float grime_up_bias : hint_range(0.0, 1.0) = 0.0;
 
+group_uniforms SkinDetail;
+// World-space mottling for character flesh. Keeps the comic flat field but
+// breaks the plastic-sphere read on heads and hands. Stay low — this is tone
+// variation, not a texture map.
+uniform float skin_mottle : hint_range(0.0, 1.0) = 0.0;
+uniform float skin_mottle_scale : hint_range(1.0, 32.0) = 10.0;
+uniform vec4 skin_mottle_cool : source_color = vec4(0.55, 0.48, 0.62, 1.0);
+uniform vec4 skin_mottle_warm : source_color = vec4(0.82, 0.58, 0.48, 1.0);
+
 varying float v_fresnel;
 varying vec3 v_world_normal;
+varying vec3 v_world_pos;
 
 void vertex() {
 	v_world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	v_world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 
 void fragment() {
@@ -75,6 +86,17 @@ void fragment() {
 	float grime = texture(grime_texture, uv).r * grime_strength;
 	grime *= mix(1.0, clamp(v_world_normal.y, 0.0, 1.0), grime_up_bias);
 	base = mix(base, grime_color.rgb, grime);
+
+	if (skin_mottle > 0.001) {
+		vec3 p = v_world_pos * skin_mottle_scale;
+		float n1 = cel_hash11(dot(floor(p), vec3(1.0, 57.0, 113.0)));
+		float n2 = cel_hash11(dot(floor(p + 17.3), vec3(13.0, 7.0, 41.0)));
+		float blotch = mix(n1, n2, 0.45);
+		vec3 mottled = mix(skin_mottle_cool.rgb, skin_mottle_warm.rgb, blotch);
+		// Preserve value; only nudge chroma so banding still reads clean.
+		float value = max(max(base.r, base.g), base.b);
+		base = mix(base, mottled * value, skin_mottle * 0.55);
+	}
 
 	ALBEDO = base;
 	ALPHA = albedo_color.a * tex.a;
