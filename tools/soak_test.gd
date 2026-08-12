@@ -6,6 +6,9 @@ extends SceneTree
 ## the failures a load-only check cannot: falling through the world, NaN in the
 ## transform, dead input bindings, a camera that never moves.
 ##
+## The last stage teleports the player across the map to confirm the chunk
+## streamer both builds ground ahead of them and lets go of what they left.
+##
 ## Usage:
 ##   godot --headless --path . --script tools/soak_test.gd
 
@@ -13,9 +16,16 @@ const SETTLE_FRAMES := 150
 const WALK_FRAMES := 90
 const JUMP_HOLD_FRAMES := 4
 const JUMP_FRAMES := 20
+const STREAM_FRAMES := 60
+
+## Far enough out that not one chunk of the spawn ring survives the move, and on
+## an exact lot corner so the teleport lands in a junction rather than inside a
+## tower. Odd parity, so the junction carries no street lamp either.
+const FAR_LOT := Vector2i(18, -15)
 
 var _scene: Node = null
 var _player: CharacterBody3D = null
+var _streamer: ChunkStreamer = null
 var _frame: int = 0
 var _stage: int = 0
 var _failures: int = 0
@@ -24,6 +34,10 @@ var _settled_position := Vector3.ZERO
 var _walk_start := Vector3.ZERO
 var _jump_start_y: float = 0.0
 var _peak_y: float = -INF
+
+var _stream_start_frame: int = 0
+var _home_coords: Array = []
+var _far_position := Vector3.ZERO
 
 
 func _initialize() -> void:
@@ -62,6 +76,10 @@ func _physics_process(_delta: float) -> bool:
 				Input.action_release("jump")
 			if _frame >= SETTLE_FRAMES + WALK_FRAMES + JUMP_FRAMES:
 				_finish_jump()
+				_begin_stream()
+		3:
+			if _frame >= _stream_start_frame + STREAM_FRAMES:
+				_finish_stream()
 				_report()
 				return true
 	return false
@@ -125,6 +143,76 @@ func _finish_jump() -> void:
 		_fail("'jump' did not lift the player (rise=%.3f m)" % rise)
 	else:
 		_ok("responds to 'jump' (rise=%.2f m)" % rise)
+
+
+func _begin_stream() -> void:
+	_stage = 3
+	_stream_start_frame = _frame
+
+	_streamer = _scene.get_node_or_null("World/Streamer") as ChunkStreamer
+	if _streamer == null:
+		# get_node_or_null returning a node that fails the cast means the class
+		# cache is stale — run `godot --headless --path . --import`.
+		_fail("main scene has no ChunkStreamer at World/Streamer")
+		return
+
+	_home_coords = _streamer.loaded_coords().duplicate()
+	_far_position = WorldGrid.lot_corner(FAR_LOT) + Vector3(0.0, 1.2, 0.0)
+
+	# Warm up first, then teleport. The other order drops the player through a
+	# world that has not been built yet, which is exactly the bug this catches.
+	_streamer.warm_up_at(_far_position)
+	_player.velocity = Vector3.ZERO
+	_player.global_position = _far_position
+
+
+func _finish_stream() -> void:
+	print("[stage 4: streaming]")
+	if _streamer == null:
+		return
+
+	var expected_centre := WorldGrid.world_to_chunk(_far_position)
+	print("        home ring %d chunks, now centred on %s with %d loaded" % [
+		_home_coords.size(), str(_streamer.current_centre()), _streamer.loaded_count(),
+	])
+
+	if _streamer.current_centre() == expected_centre:
+		_ok("streamer followed the player to %s" % str(expected_centre))
+	else:
+		_fail("streamer centre is %s, expected %s" % [
+			str(_streamer.current_centre()), str(expected_centre),
+		])
+
+	var expected_count := _streamer.expected_loaded_count()
+	if _streamer.loaded_count() == expected_count:
+		_ok("holds exactly the %d chunks of the load ring" % expected_count)
+	else:
+		_fail("holds %d chunks, expected %d" % [
+			_streamer.loaded_count(), expected_count,
+		])
+
+	# The point of streaming is what is *not* resident.
+	var stale := 0
+	for coord: Vector2i in _home_coords:
+		if _streamer.is_loaded(coord):
+			stale += 1
+	if stale == 0:
+		_ok("released all %d chunks from the spawn ring" % _home_coords.size())
+	else:
+		_fail("%d chunk(s) from the spawn ring are still resident" % stale)
+
+	# And that there is ground under the player when they get there.
+	var y := _player.global_position.y
+	if not _is_finite(_player.global_position):
+		_fail("player position is not finite after the teleport")
+	elif absf(y) > 0.25:
+		_fail("no streamed ground under the player at %s (y=%.3f)" % [
+			str(_streamer.current_centre()), y,
+		])
+	elif not _player.is_on_floor():
+		_fail("player is not standing on the streamed ground")
+	else:
+		_ok("stands on streamed ground at y=%.3f" % y)
 
 
 func _is_finite(v: Vector3) -> bool:

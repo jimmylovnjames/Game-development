@@ -17,7 +17,7 @@ flags, objective tracking, dialogue, the journal, and the tests for all of it.
 **Not yours — do not edit:**
 
 ```
-shaders/                              scripts/world/district_blockout.gd
+shaders/                              scripts/world/
 assets/materials/                     tools/screenshot.gd
 scenes/main.tscn  (WorldEnvironment, Moonlight, World/*)
 worlds/                               scripts/player/player_controller.gd

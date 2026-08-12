@@ -7,21 +7,29 @@ extends Node3D
 ## assert against.
 
 @export var print_boot_report: bool = true
+## The world is streamed, so there is no floor outside the load ring. If the
+## player ends up under it — a streaming stall, a physics tunnel, a bad teleport
+## — put them back rather than letting them fall forever.
+@export var fall_respawn_y: float = -25.0
 
 @onready var _player: PlayerController = $Player
-@onready var _blockout: DistrictBlockout = $World/Blockout
+@onready var _streamer: ChunkStreamer = $World/Streamer
 @onready var _debug_label: Label = $DebugHUD/DebugLabel
 
 var _debug_visible: bool = true
 
 
 func _ready() -> void:
-	_player.global_position = _blockout.get_spawn_point()
+	# Warm up before moving the player: a frame-budgeted stream would drop them
+	# through a world that has not been built yet.
+	_streamer.warm_up_at(_streamer.get_spawn_point())
+	_player.global_position = _streamer.get_spawn_point()
+
 	_player.interactable_changed.connect(_on_interactable_changed)
 	_player.landed.connect(_on_landed)
 
 	if print_boot_report:
-		# Deferred so the blockout has finished spawning before we count nodes.
+		# Deferred so the streamer has finished its warm-up before we count nodes.
 		call_deferred("_print_boot_report")
 
 
@@ -35,6 +43,10 @@ func _print_boot_report() -> void:
 	print("  headless      : %s" % str(DisplayServer.get_name() == "headless"))
 	print("  main scene    : %s" % scene_file_path)
 	print("  player at     : %s" % str(_player.global_position))
+	print("  world seed    : %d" % _streamer.world_seed)
+	print("  chunks loaded : %d of %d expected" % [
+		_streamer.loaded_count(), _streamer.expected_loaded_count(),
+	])
 	print("  spawned nodes : %d under World" % _count_descendants($World))
 	print("  viewport size : %s" % str(viewport.get_visible_rect().size))
 	print("================================")
@@ -54,11 +66,15 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
+	if _player.global_position.y < fall_respawn_y:
+		_respawn()
+
 	if not _debug_visible or not _debug_label.visible:
 		return
 	var interactable := _player.get_current_interactable()
+	var biome := _streamer.biome_at(_player.global_position)
 	_debug_label.text = "\n".join([
-		"NeonWastesRPG — blockout",
+		"NeonWastesRPG — seed %d" % _streamer.world_seed,
 		"fps      %d" % Engine.get_frames_per_second(),
 		"pos      %.1f, %.1f, %.1f" % [
 			_player.global_position.x,
@@ -68,10 +84,26 @@ func _process(_delta: float) -> void:
 		"speed    %.1f m/s" % Vector2(_player.velocity.x, _player.velocity.z).length(),
 		"grounded %s" % str(_player.is_on_floor()),
 		"target   %s" % ("—" if interactable == null else interactable.name),
+		"chunk    %s · %s (%.2f)" % [
+			str(_streamer.current_centre()),
+			"—" if biome == null else biome.display_name,
+			_streamer.urbanisation(_player.global_position),
+		],
+		"streamed %d loaded · %d queued" % [
+			_streamer.loaded_count(), _streamer.pending_count(),
+		],
 		"",
 		"WASD move · Shift sprint · Ctrl crouch · Space jump",
 		"E interact · F flashlight · Esc release mouse · F3 hide",
 	])
+
+
+func _respawn() -> void:
+	var spawn := _streamer.get_spawn_point()
+	_streamer.warm_up_at(spawn)
+	_player.velocity = Vector3.ZERO
+	_player.global_position = spawn
+	print("[GameRoot] player fell out of the world; respawned at %s" % str(spawn))
 
 
 func _on_interactable_changed(interactable: Node3D) -> void:

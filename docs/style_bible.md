@@ -142,12 +142,18 @@ mid-ground; leaving distant bulk architecture un-inked builds depth.
 
 ---
 
-## 6. Current blockout
+## 6. Current world
 
-`scenes/main.tscn` + `scripts/world/district_blockout.gd` generate a seeded
-placeholder district: greybox towers, hung neon signage with per-sign flicker
-phase, cantilevered sodium street lamps, rubble lots, and a central plaza.
+`scripts/world/chunk_streamer.gd` builds the world as 64 m chunks around the
+player: greybox towers, hung neon signage with per-sign flicker phase,
+cantilevered sodium street lamps, rubble lots, and a central plaza at the
+origin. What a region looks like is `Biome` data in `worlds/biomes/`, not code.
 
-It is **scaffolding for judging the shaders and camera**, not the shipping
-world generator — the chunk streamer under `worlds/` replaces it wholesale.
-Gameplay code must not depend on anything it spawns.
+Two constraints the look depends on:
+
+- **Lights are ringed.** Only chunks inside `detail_radius` keep their
+  `Light3D`s; the rest keep their emissive signage and go dark. A full load ring
+  of lit chunks is well over a hundred lights in frame, and the cel bands go
+  flat under that (see CLAUDE.md §6).
+- **Nothing is permanent.** Chunks outside the load ring are freed. Gameplay
+  code must not hold a reference to anything the generator spawned.

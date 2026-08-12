@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Biome" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/biome.gd" id="1_biome"]
+
+[resource]
+script = ExtResource("1_biome")
+resource_name = "core_halo"
+id = &"core_halo"
+display_name = "Ferrum Halo Core"
+min_urbanisation = 0.64
+max_urbanisation = 1.0
+building_chance = 0.88
+rubble_chance = 0.35
+min_height = 14.0
+max_height = 52.0
+height_bias = 2.2
+min_footprint = 9.0
+max_footprint = 16.0
+sign_chance = 0.68
+sign_tints = PackedColorArray(1, 0.176, 0.584, 1, 0, 0.898, 1, 1)
+sign_energy = 2.6
+sign_light_energy = 3.5
+sign_light_range = 18.0
+max_sign_dropout = 0.08
+lamp_chance = 0.9
+lamp_energy = 2.6
+lamp_color = Color(1, 0.678, 0.361, 1)

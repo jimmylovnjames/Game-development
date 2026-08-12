@@ -16,6 +16,8 @@ func _initialize() -> void:
 	_check_main_scene()
 	_check_addons()
 	_check_quests()
+	_check_biomes()
+	_check_chunk_generation()
 
 	print("")
 	if _failures == 0:
@@ -120,7 +122,7 @@ func _check_main_scene() -> void:
 		_ok("root script attached: %s" % instance.get_script().resource_path)
 
 	for node_path: String in [
-		"WorldEnvironment", "Moonlight", "World/Ground", "World/Blockout",
+		"WorldEnvironment", "Moonlight", "World/Streamer",
 		"Player", "Player/CameraPivot/SpringArm3D/Camera3D",
 		"Player/CameraPivot/SpringArm3D/Camera3D/InteractRay",
 		"DebugHUD/DebugLabel",
@@ -182,6 +184,92 @@ func _check_quests() -> void:
 		else:
 			for warning: String in warnings:
 				_fail("%s: %s" % [path.get_file(), warning])
+
+
+func _check_biomes() -> void:
+	print("[biomes]")
+	var biomes := ChunkStreamer.load_biomes("res://worlds/biomes")
+	if biomes.is_empty():
+		_fail("no Biome resources found under res://worlds/biomes")
+		return
+
+	# The urbanisation field runs 0..1 and every value has to land somewhere; a
+	# hole in the bands means a chunk with no biome, which generates as bare
+	# ground with only a warning to show for it.
+	var cursor := 0.0
+	for biome: Biome in biomes:
+		for warning: String in biome.design_warnings():
+			_fail("%s: %s" % [String(biome.id), warning])
+		if not is_equal_approx(biome.min_urbanisation, cursor):
+			_fail("urbanisation gap or overlap at %.2f before '%s' (starts %.2f)" % [
+				cursor, String(biome.id), biome.min_urbanisation,
+			])
+		cursor = biome.max_urbanisation
+		_ok("%s covers %.2f..%.2f" % [
+			String(biome.id), biome.min_urbanisation, biome.max_urbanisation,
+		])
+	if not is_equal_approx(cursor, 1.0):
+		_fail("biome bands stop at %.2f, not 1.0" % cursor)
+
+
+func _check_chunk_generation() -> void:
+	print("[chunk streaming]")
+	var biomes := ChunkStreamer.load_biomes("res://worlds/biomes")
+	if biomes.is_empty():
+		return  # already reported by _check_biomes
+
+	var generator := ChunkGenerator.new()
+	generator.configure(20771113, biomes)
+
+	# Any chunk clear of the plaza cut-out, so there is content to compare.
+	var coord := Vector2i(3, -2)
+	var first := generator.generate(coord)
+	if first.get_child_count() == 0:
+		_fail("chunk %s generated nothing at all" % str(coord))
+	else:
+		_ok("chunk %s: %s" % [str(coord), first.describe()])
+
+	# Same seed and coordinate must produce the same block from a cold generator,
+	# or a seed in a bug report reproduces nothing.
+	var other := ChunkGenerator.new()
+	other.configure(20771113, biomes)
+	var repeat := other.generate(coord)
+	if first.fingerprint() == repeat.fingerprint():
+		_ok("regenerates identically from a fresh generator")
+	else:
+		_fail("chunk %s is not deterministic across generators" % str(coord))
+
+	var neighbour := generator.generate(coord + Vector2i(1, 0))
+	if neighbour.fingerprint() == first.fingerprint():
+		_fail("neighbouring chunks generated identical content")
+	else:
+		_ok("neighbouring chunk differs")
+
+	# The spawn plaza has to stay clear or the player boots inside a tower. All
+	# four chunks meeting at the origin can put content near it.
+	var intruders := 0
+	var plaza_chunks: Array[WorldChunk] = []
+	for coord_offset: Vector2i in [
+		Vector2i(0, 0), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(-1, -1)
+	]:
+		var chunk := generator.generate(coord_offset)
+		plaza_chunks.append(chunk)
+		var chunk_origin := WorldGrid.chunk_origin(coord_offset)
+		for child in chunk.get_children():
+			if not String(child.name).begins_with("Building"):
+				continue
+			var world_position: Vector3 = chunk_origin + (child as Node3D).position
+			if Vector2(world_position.x, world_position.z).length() < generator.plaza_radius:
+				intruders += 1
+	if intruders == 0:
+		_ok("spawn plaza is clear across all four chunks that meet at the origin")
+	else:
+		_fail("%d building(s) generated inside the spawn plaza" % intruders)
+
+	var built: Array[WorldChunk] = [first, repeat, neighbour]
+	built.append_array(plaza_chunks)
+	for chunk: WorldChunk in built:
+		chunk.free()
 
 
 func _list_files(dir_path: String, suffix: String) -> Array[String]:

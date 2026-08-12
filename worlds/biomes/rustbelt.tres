@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Biome" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/biome.gd" id="1_biome"]
+
+[resource]
+script = ExtResource("1_biome")
+resource_name = "rustbelt"
+id = &"rustbelt"
+display_name = "Halo Rustbelt"
+min_urbanisation = 0.3
+max_urbanisation = 0.64
+building_chance = 0.62
+rubble_chance = 0.7
+min_height = 6.0
+max_height = 24.0
+height_bias = 2.6
+min_footprint = 8.0
+max_footprint = 14.0
+sign_chance = 0.34
+sign_tints = PackedColorArray(1, 0.176, 0.584, 1, 0, 0.898, 1, 1, 0.969, 1, 0.235, 1)
+sign_energy = 2.4
+sign_light_energy = 2.8
+sign_light_range = 15.0
+max_sign_dropout = 0.3
+lamp_chance = 0.55
+lamp_energy = 2.2
+lamp_color = Color(1, 0.678, 0.361, 1)
