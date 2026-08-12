@@ -108,9 +108,18 @@ func pending_count() -> int:
 	return _pending.size()
 
 
-## How many chunks a settled streamer should be holding.
-func expected_loaded_count() -> int:
+## Chunks in the load ring. Only equal to `loaded_count()` straight after a
+## `warm_up()` — in motion the resident set runs ahead of it, because the
+## hysteresis margin keeps chunks the player just left.
+func load_ring_count() -> int:
 	var side := load_radius * 2 + 1
+	return side * side
+
+
+## Ceiling on the resident set: the load ring plus everything the hysteresis
+## margin is still holding on to.
+func max_resident_count() -> int:
+	var side := (load_radius + unload_padding) * 2 + 1
 	return side * side
 
 

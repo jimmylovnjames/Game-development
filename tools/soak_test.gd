@@ -183,12 +183,28 @@ func _finish_stream() -> void:
 			str(_streamer.current_centre()), str(expected_centre),
 		])
 
-	var expected_count := _streamer.expected_loaded_count()
-	if _streamer.loaded_count() == expected_count:
-		_ok("holds exactly the %d chunks of the load ring" % expected_count)
+	# Exact, because the teleport went through warm_up(): a full recentre drops
+	# everything the hysteresis margin would otherwise still be holding.
+	var ring := _streamer.load_ring_count()
+	if _streamer.loaded_count() == ring:
+		_ok("holds exactly the %d chunks of the load ring" % ring)
 	else:
-		_fail("holds %d chunks, expected %d" % [
-			_streamer.loaded_count(), expected_count,
+		_fail("holds %d chunks, expected the %d of the load ring" % [
+			_streamer.loaded_count(), ring,
+		])
+
+	# The spawn ring was captured mid-walk, after the player crossed a seam, so
+	# it carries the hysteresis margin. That margin is the whole reason walking
+	# back and forth over a border does not rebuild a chunk every step — but it
+	# has to stay bounded, or "streaming" is just a slow memory leak.
+	var ceiling := _streamer.max_resident_count()
+	if _home_coords.size() <= ceiling:
+		_ok("spawn ring held %d chunks, inside the %d hysteresis ceiling" % [
+			_home_coords.size(), ceiling,
+		])
+	else:
+		_fail("spawn ring held %d chunks, over the %d hysteresis ceiling" % [
+			_home_coords.size(), ceiling,
 		])
 
 	# The point of streaming is what is *not* resident.

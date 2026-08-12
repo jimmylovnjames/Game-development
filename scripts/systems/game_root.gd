@@ -44,8 +44,8 @@ func _print_boot_report() -> void:
 	print("  main scene    : %s" % scene_file_path)
 	print("  player at     : %s" % str(_player.global_position))
 	print("  world seed    : %d" % _streamer.world_seed)
-	print("  chunks loaded : %d of %d expected" % [
-		_streamer.loaded_count(), _streamer.expected_loaded_count(),
+	print("  chunks loaded : %d (load ring %d)" % [
+		_streamer.loaded_count(), _streamer.load_ring_count(),
 	])
 	print("  spawned nodes : %d under World" % _count_descendants($World))
 	print("  viewport size : %s" % str(viewport.get_visible_rect().size))
