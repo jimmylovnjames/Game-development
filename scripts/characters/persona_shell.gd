@@ -93,13 +93,16 @@ func _ready() -> void:
 func _build_rig() -> void:
 	# Palette comes from the archetype defaults unless the profile overrides it.
 	var palette := PackedColorArray()
-	if profile.body_tint != Color(0.16, 0.18, 0.26):
+	if profile.body_tint != Color(0.16, 0.18, 0.26) or profile.use_skin_tint:
 		palette = CharacterBuilder.PALETTES.get(
 			profile.rig_archetype, CharacterBuilder.PALETTES[&"fixer"]
 		).duplicate()
-		palette[0] = profile.body_tint
-		palette[1] = profile.name_color
-		palette[3] = profile.name_color
+		if profile.body_tint != Color(0.16, 0.18, 0.26):
+			palette[0] = profile.body_tint
+			palette[1] = profile.name_color
+			palette[3] = profile.name_color
+		if profile.use_skin_tint:
+			palette[2] = profile.skin_tint
 	_rig = CharacterBuilder.build(
 		profile.rig_archetype, profile.rig_height, profile.rig_bulk, palette
 	)

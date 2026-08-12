@@ -21,6 +21,9 @@ extends Resource
 @export var name_color: Color = Color(0.0, 0.898, 1.0)
 ## Body tint so silhouettes stay distinct at blockout fidelity.
 @export var body_tint: Color = Color(0.16, 0.18, 0.26)
+## Optional skin-tone override separate from coat tint.
+@export var use_skin_tint: bool = false
+@export var skin_tint: Color = Color(0.72, 0.66, 0.79)
 
 @export_group("Behavior")
 ## The behavioral persona prompt: temperament, loyalties, speech rhythm, and
