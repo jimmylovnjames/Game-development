@@ -32,13 +32,15 @@ const FEATURES := {
 
 ## Default palettes per archetype: coat / trim (accent + rim) / skin / eyes.
 ## Saturated colour lives in trim and eyes only — the style bible's rule.
+## Coat albedos stay desaturated but not crushed — too-dark coats erase
+## silhouette breaks (pockets, flaps, cuffs) under neon bloom.
 const PALETTES := {
-	&"fixer": [Color(0.1, 0.11, 0.15), Color(1.0, 0.176, 0.584), Color(0.78, 0.62, 0.72), Color(1.0, 0.176, 0.584)],
-	&"vendor": [Color(0.23, 0.14, 0.09), Color(1.0, 0.68, 0.36), Color(0.84, 0.68, 0.54), Color(1.0, 0.68, 0.36)],
-	&"preacher": [Color(0.07, 0.07, 0.1), Color(0.969, 1.0, 0.235), Color(0.68, 0.58, 0.7), Color(0.969, 1.0, 0.235)],
-	&"urchin": [Color(0.11, 0.13, 0.19), Color(0.0, 0.898, 1.0), Color(0.76, 0.58, 0.48), Color(0.0, 0.898, 1.0)],
-	&"warden": [Color(0.14, 0.13, 0.1), Color(0.56, 0.66, 0.78), Color(0.7, 0.58, 0.52), Color(0.56, 0.66, 0.78)],
-	&"courier": [Color(0.09, 0.13, 0.17), Color(0.0, 0.898, 1.0), Color(0.76, 0.62, 0.74), Color(0.0, 0.898, 1.0)],
+	&"fixer": [Color(0.16, 0.17, 0.22), Color(1.0, 0.176, 0.584), Color(0.82, 0.66, 0.74), Color(1.0, 0.176, 0.584)],
+	&"vendor": [Color(0.28, 0.18, 0.12), Color(1.0, 0.68, 0.36), Color(0.88, 0.72, 0.58), Color(1.0, 0.68, 0.36)],
+	&"preacher": [Color(0.12, 0.12, 0.16), Color(0.969, 1.0, 0.235), Color(0.72, 0.62, 0.74), Color(0.969, 1.0, 0.235)],
+	&"urchin": [Color(0.16, 0.18, 0.24), Color(0.0, 0.898, 1.0), Color(0.8, 0.62, 0.52), Color(0.0, 0.898, 1.0)],
+	&"warden": [Color(0.2, 0.19, 0.15), Color(0.56, 0.66, 0.78), Color(0.74, 0.62, 0.56), Color(0.56, 0.66, 0.78)],
+	&"courier": [Color(0.14, 0.18, 0.24), Color(0.0, 0.898, 1.0), Color(0.8, 0.66, 0.76), Color(0.0, 0.898, 1.0)],
 }
 
 
@@ -56,11 +58,11 @@ static func build(
 	var features: Dictionary = FEATURES.get(archetype, FEATURES[&"fixer"])
 	var is_player := archetype == &"courier"
 
-	var coat_mat := _cloth(palette[0], palette[1], 0.86, is_player, 0.14)
-	var trim_mat := _cloth(palette[0].darkened(0.35), palette[1], 0.8, is_player, 0.1)
+	var coat_mat := _cloth(palette[0], palette[1], 0.86, is_player, 0.06)
+	var trim_mat := _cloth(palette[0].darkened(0.25), palette[1], 0.8, is_player, 0.04)
 	var skin_mat := _skin(palette[2], palette[1], is_player)
-	var hat_mat := _cloth(palette[0].darkened(0.5), palette[1], 0.88, is_player, 0.08)
-	var leather_mat := _cloth(palette[0].darkened(0.25).lerp(Color(0.18, 0.1, 0.07), 0.45), palette[1], 0.72, is_player, 0.06)
+	var hat_mat := _cloth(palette[0].darkened(0.35), palette[1], 0.88, is_player, 0.03)
+	var leather_mat := _cloth(palette[0].darkened(0.15).lerp(Color(0.22, 0.12, 0.09), 0.4), palette[1], 0.72, is_player, 0.04)
 	var eye_mat := _neon(palette[3], 1.9)
 	var glow_mat := _neon(palette[1], 2.2)
 
@@ -301,12 +303,18 @@ static func _build_head(
 		Vector3(0.0, -head_r * 0.05, -head_r * 0.92), "Nose")
 	_part(head, _box(Vector3(head_r * 1.05, head_r * 0.1, head_r * 0.12)), hat_mat,
 		Vector3(0.0, head_r * 0.28, -head_r * 0.7), "Brow")
+	# Mouth slit — a hard comic cut, not lips.
+	_part(head, _box(Vector3(head_r * 0.35, head_r * 0.06, head_r * 0.08)), hat_mat,
+		Vector3(0.0, -head_r * 0.35, -head_r * 0.78), "Mouth")
 	for side in [-1.0, 1.0]:
 		_part(head, _sphere(head_r * 0.28), skin_mat,
 			Vector3(side * head_r * 0.55, -head_r * 0.05, -head_r * 0.25), "Cheek" + _s(side))
 		var ear := _part(head, _box(Vector3(head_r * 0.18, head_r * 0.35, head_r * 0.2)), skin_mat,
 			Vector3(side * head_r * 0.95, 0.0, 0.0), "Ear" + _s(side))
 		ear.rotation.z = side * 0.15
+		# Hair / sideburn wedges so the skull isn't a bare ball under the hat.
+		_part(head, _box(Vector3(head_r * 0.22, head_r * 0.4, head_r * 0.35)), hat_mat,
+			Vector3(side * head_r * 0.7, head_r * 0.15, head_r * 0.15), "Sideburn" + _s(side))
 
 	if features["eyes"] == "visor":
 		_part(head, _box(Vector3(height * 0.14, 0.04, 0.025)), eye_mat,
@@ -398,14 +406,14 @@ static func _skin(color: Color, rim: Color, is_player: bool) -> ShaderMaterial:
 	mat.set_shader_parameter("spec_strength", 0.22)
 	mat.set_shader_parameter("spec_threshold", 0.74)
 	mat.set_shader_parameter("spec_softness", 0.04)
-	mat.set_shader_parameter("rim_strength", 1.1 if is_player else 0.55)
-	mat.set_shader_parameter("rim_power", 2.8)
-	mat.set_shader_parameter("rim_light_bias", 0.12 if is_player else 0.5)
+	mat.set_shader_parameter("rim_strength", 1.35 if is_player else 0.7)
+	mat.set_shader_parameter("rim_power", 2.6)
+	mat.set_shader_parameter("rim_light_bias", 0.08 if is_player else 0.4)
 	mat.set_shader_parameter("light_ramp", SKIN_RAMP)
 	mat.set_shader_parameter("use_light_ramp", true)
-	mat.set_shader_parameter("detail_strength", 0.26 if is_player else 0.2)
+	mat.set_shader_parameter("detail_strength", 0.28 if is_player else 0.22)
 	mat.set_shader_parameter("detail_scale", 16.0)
-	mat.set_shader_parameter("detail_contrast", 0.6)
+	mat.set_shader_parameter("detail_contrast", 0.65)
 	return mat
 
 
@@ -418,18 +426,19 @@ static func _cloth(
 	mat.set_shader_parameter("albedo_color", color)
 	mat.set_shader_parameter("roughness", roughness)
 	mat.set_shader_parameter("rim_color", rim)
-	mat.set_shader_parameter("rim_strength", 1.35 if is_player else 0.8)
-	mat.set_shader_parameter("rim_light_bias", 0.15 if is_player else 0.55)
-	mat.set_shader_parameter("shadow_tint_strength", 0.6)
-	mat.set_shader_parameter("shadow_wrap", 0.32)
-	mat.set_shader_parameter("spec_strength", 0.55)
+	mat.set_shader_parameter("rim_strength", 1.55 if is_player else 0.95)
+	mat.set_shader_parameter("rim_light_bias", 0.1 if is_player else 0.45)
+	mat.set_shader_parameter("shadow_tint_strength", 0.55)
+	mat.set_shader_parameter("shadow_wrap", 0.34)
+	mat.set_shader_parameter("spec_strength", 0.45)
 	mat.set_shader_parameter("light_ramp", LIGHT_RAMP)
 	mat.set_shader_parameter("use_light_ramp", true)
-	mat.set_shader_parameter("detail_strength", 0.14)
+	mat.set_shader_parameter("detail_strength", 0.16)
 	mat.set_shader_parameter("detail_scale", 7.0)
-	mat.set_shader_parameter("detail_contrast", 0.5)
-	mat.set_shader_parameter("grime_strength", grime)
-	mat.set_shader_parameter("grime_up_bias", 0.35)
+	mat.set_shader_parameter("detail_contrast", 0.55)
+	# Flat white default sampler would otherwise dirt-wash the whole coat.
+	mat.set_shader_parameter("grime_strength", minf(grime, 0.08))
+	mat.set_shader_parameter("grime_up_bias", 0.55)
 	return mat
 
 
