@@ -49,6 +49,8 @@ godot --headless --path . --script tools/verify_setup.gd   # input map, shaders,
 godot --headless --path . --script tools/soak_test.gd      # physics + synthetic input
 
 python3 tools/verify_mcp.py                        # handshake every server in .mcp.json
+bash tools/check_macos_installer.sh                # playtest installer + macOS export preset
+GODOT=godot bash tools/export_macos.sh             # writes build/macos/NeonWastesRPG.zip
 
 godot --path .                                     # open the editor
 godot --path . --headless --quit-after 300         # run the game headlessly
@@ -213,6 +215,9 @@ model is wrong.
   `godot --headless --path . --import` or scenes will silently instantiate
   *without their script attached* — `instantiate()` still succeeds. Assert
   `get_script() != null` in tests.
+- **macOS universal / Apple Silicon export needs ETC2 ASTC.** Godot refuses
+  the export unless `rendering/textures/vram_compression/import_etc2_astc` is
+  true. Keep that on; `tools/check_macos_installer.sh` asserts it.
 
 ---
 

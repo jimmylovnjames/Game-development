@@ -1,0 +1,97 @@
+name: macOS playtest
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+
+jobs:
+  export-macos:
+    name: Export universal macOS zip
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: "4.7.1"
+      GODOT_TAG: "4.7.1-stable"
+      GODOT_LINUX_SHA512: "4ccdab7a48eeccbe8819a2fc1f6262f8d72065d98601bcb3743fcbd7ebd39f373758a788ee3293a05ec5b2c48538266c437404312e372225cd2df273945a2de9"
+      GODOT_TEMPLATES_SHA512: "afcc83d8d3d298038f19c58744a0d660fa75dd4baa33cb55d1011bb2565a2a8c2381728924564cb909e37c205a23f21b521b23bd057993afd43ae4da0b2f9d47"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Godot editor + export templates
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/godot-dl
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_TAG }}-linux-x64-templates
+
+      - name: Install Godot ${{ env.GODOT_VERSION }} and export templates
+        run: |
+          set -euo pipefail
+          DL="${RUNNER_TEMP}/godot-dl"
+          mkdir -p "$DL"
+          EDITOR_ZIP="$DL/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          TEMPLATES_TPZ="$DL/Godot_v${GODOT_TAG}_export_templates.tpz"
+          BASE="https://github.com/godotengine/godot-builds/releases/download/${GODOT_TAG}"
+
+          if [ ! -f "$EDITOR_ZIP" ]; then
+            curl -fL --retry 5 -o "$EDITOR_ZIP" "$BASE/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          fi
+          echo "${GODOT_LINUX_SHA512}  $EDITOR_ZIP" | sha512sum -c -
+
+          if [ ! -f "$TEMPLATES_TPZ" ]; then
+            curl -fL --retry 5 -o "$TEMPLATES_TPZ" "$BASE/Godot_v${GODOT_TAG}_export_templates.tpz"
+          fi
+          echo "${GODOT_TEMPLATES_SHA512}  $TEMPLATES_TPZ" | sha512sum -c -
+
+          unzip -o -q "$EDITOR_ZIP" -d "$DL/editor"
+          GODOT_BIN=""
+          for candidate in "$DL/editor"/Godot*; do
+            if [ -f "$candidate" ]; then
+              GODOT_BIN="$candidate"
+              break
+            fi
+          done
+          if [ -z "$GODOT_BIN" ]; then
+            echo "ERROR: Godot binary missing from editor zip" >&2
+            exit 1
+          fi
+          chmod +x "$GODOT_BIN"
+          mkdir -p "$HOME/.local/bin"
+          ln -sf "$GODOT_BIN" "$HOME/.local/bin/godot"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "GODOT=$GODOT_BIN" >> "$GITHUB_ENV"
+
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          if [ ! -f "$TEMPLATE_DIR/version.txt" ]; then
+            mkdir -p "$TEMPLATE_DIR"
+            unzip -o -q "$TEMPLATES_TPZ" -d "$DL/templates-unpack"
+            if [ -d "$DL/templates-unpack/templates" ]; then
+              cp -a "$DL/templates-unpack/templates/." "$TEMPLATE_DIR/"
+            else
+              cp -a "$DL/templates-unpack/." "$TEMPLATE_DIR/"
+            fi
+          fi
+          echo "templates -> $TEMPLATE_DIR"
+          ls "$TEMPLATE_DIR" | sed -n '1,20p'
+
+      - name: Verify Godot version
+        run: |
+          godot --version
+          godot --version | grep -q "${GODOT_VERSION}"
+
+      - name: Headless setup check
+        run: |
+          godot --headless --path . --import
+          godot --headless --path . --script tools/verify_setup.gd
+
+      - name: Export macOS playtest zip
+        run: GODOT=godot bash tools/export_macos.sh
+
+      - name: Upload NeonWastesRPG-macos.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeonWastesRPG-macos
+          path: build/macos/NeonWastesRPG.zip
+          if-no-files-found: error
