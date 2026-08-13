@@ -15,6 +15,15 @@ post-apocalyptic grit — rendered as **3D cel-shaded comic art**.
 - **Node.js 18+** and **Python 3.11+** — only for the MCP tooling
 - On a headless machine, `mesa-vulkan-drivers` + `xvfb` to render screenshots
 
+## Play on a MacBook
+
+Double-click **`Play on Mac.command`** in Finder (right-click → Open the first
+time if Gatekeeper warns). That downloads official Godot 4.7.1, imports this
+project, and installs `~/Applications/NeonWastesRPG.app`.
+
+Details, uninstall, and the CI-exported `.app` zip:
+[`dist/macos/README.md`](dist/macos/README.md).
+
 ## Quick start
 
 ```bash
@@ -31,12 +40,13 @@ godot --path . --headless --quit-after 300
 
 ## Verification
 
-Three headless checks, none of which need a display:
+Headless checks, none of which need a display:
 
 ```bash
 godot --headless --path . --script tools/verify_setup.gd  # input map, shaders, scene, addons, quests
 godot --headless --path . --script tools/soak_test.gd     # physics settle, walk, jump
 python3 tools/verify_mcp.py                               # MCP servers in .mcp.json
+bash tools/check_macos_installer.sh                       # playtest installer + export preset
 ```
 
 `verify_setup.gd` picks up new shaders and quest resources automatically. New
