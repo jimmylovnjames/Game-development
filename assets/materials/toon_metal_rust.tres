@@ -1,0 +1,42 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://shaders/toon_cel.gdshader" id="1_toon"]
+[ext_resource type="Material" path="res://assets/materials/outline_ink.tres" id="2_ink"]
+
+[resource]
+resource_name = "toon_metal_rust"
+render_priority = 0
+next_pass = ExtResource("2_ink")
+shader = ExtResource("1_toon")
+shader_parameter/albedo_color = Color(0.24, 0.22, 0.25, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/roughness = 0.55
+shader_parameter/metallic = 0.35
+shader_parameter/world_uv = true
+shader_parameter/world_uv_scale = 0.25
+shader_parameter/light_bands = 3.0
+shader_parameter/band_softness = 0.02
+shader_parameter/shadow_wrap = 0.3
+shader_parameter/shadow_tint = Color(0.25, 0.15, 0.38, 1)
+shader_parameter/shadow_tint_strength = 0.6
+shader_parameter/spec_threshold = 0.5
+shader_parameter/spec_softness = 0.02
+shader_parameter/spec_strength = 0.95
+shader_parameter/rim_color = Color(0.0, 0.9, 1.0, 1)
+shader_parameter/rim_power = 3.5
+shader_parameter/rim_strength = 0.8
+shader_parameter/rim_light_bias = 0.5
+shader_parameter/emission_color = Color(0, 0, 0, 1)
+shader_parameter/emission_energy = 0.0
+shader_parameter/grime_color = Color(0.38, 0.16, 0.07, 1)
+shader_parameter/grime_strength = 0.65
+shader_parameter/grime_up_bias = 0.5
+shader_parameter/wetness = 0.3
+shader_parameter/puddle_scale = 0.3
+shader_parameter/puddle_roughness = 0.05
+shader_parameter/enable_halftone = false
+shader_parameter/halftone_scale = 28.0
+shader_parameter/halftone_strength = 0.0
+shader_parameter/enable_hatching = true
+shader_parameter/hatch_scale = 20.0
+shader_parameter/hatch_strength = 0.4

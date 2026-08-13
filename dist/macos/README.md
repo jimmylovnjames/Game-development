@@ -38,7 +38,7 @@ NEONWASTES_REF=your-branch-name /bin/bash -c "$(curl -fsSL https://raw.githubuse
 ## Controls
 
 `WASD` move · `Shift` sprint · `Ctrl` crouch · `Space` jump · `E` interact ·
-`F` flashlight · `RMB` aim · `Esc` release mouse · `F3` debug overlay
+`F` flashlight · `T` toggle daytime / night · `RMB` aim · `Esc` release mouse · `F3` debug overlay
 
 ## MacBook Air notes
 

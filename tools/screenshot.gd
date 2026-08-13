@@ -15,6 +15,7 @@ extends SceneTree
 ##   --yaw=DEG         player-cam yaw   (ignored when --cam is set)
 ##   --pitch=DEG       player-cam pitch (ignored when --cam is set)
 ##   --dist=M          player-cam spring length          (default 7)
+##   --time=F          set time of day 0.0-1.0 (0=night, 0.5=noon, 0.75=dusk)
 ##   --hud=0           hide the debug overlay
 ##   --fog=0           disable both fog passes (isolate the shading)
 ##   --glow=0          disable the glow pass
@@ -28,6 +29,7 @@ var _fov := 70.0
 var _yaw_deg := 35.0
 var _pitch_deg := -6.0
 var _distance := 7.0
+var _time_of_day := -1.0
 var _show_hud := true
 var _fog := true
 var _glow := true
@@ -68,6 +70,7 @@ func _parse_args() -> void:
 			"yaw": _yaw_deg = float(value)
 			"pitch": _pitch_deg = float(value)
 			"dist": _distance = float(value)
+			"time": _time_of_day = float(value)
 			"hud": _show_hud = value != "0"
 			"fog": _fog = value != "0"
 			"glow": _glow = value != "0"
@@ -86,6 +89,12 @@ func _setup_shot() -> void:
 	var hud := _scene.get_node_or_null("DebugHUD") as CanvasLayer
 	if hud != null:
 		hud.visible = _show_hud
+
+	if _time_of_day >= 0.0:
+		var cycle := _scene.get_node_or_null("DayNightCycle") as DayNightCycle
+		if cycle != null:
+			cycle.auto_advance = false
+			cycle.time_of_day = _time_of_day
 
 	_apply_environment_overrides()
 
