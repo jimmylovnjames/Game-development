@@ -1,0 +1,42 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://shaders/toon_cel.gdshader" id="1_toon"]
+[ext_resource type="Material" path="res://assets/materials/outline_ink.tres" id="2_ink"]
+
+[resource]
+resource_name = "toon_sand"
+render_priority = 0
+next_pass = ExtResource("2_ink")
+shader = ExtResource("1_toon")
+shader_parameter/albedo_color = Color(0.42, 0.32, 0.22, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/roughness = 0.95
+shader_parameter/metallic = 0.0
+shader_parameter/world_uv = true
+shader_parameter/world_uv_scale = 0.1
+shader_parameter/light_bands = 2.0
+shader_parameter/band_softness = 0.05
+shader_parameter/shadow_wrap = 0.4
+shader_parameter/shadow_tint = Color(0.28, 0.16, 0.38, 1)
+shader_parameter/shadow_tint_strength = 0.5
+shader_parameter/spec_threshold = 0.7
+shader_parameter/spec_softness = 0.1
+shader_parameter/spec_strength = 0.2
+shader_parameter/rim_color = Color(1.0, 0.68, 0.36, 1)
+shader_parameter/rim_power = 4.5
+shader_parameter/rim_strength = 0.5
+shader_parameter/rim_light_bias = 0.6
+shader_parameter/emission_color = Color(0, 0, 0, 1)
+shader_parameter/emission_energy = 0.0
+shader_parameter/grime_color = Color(0.18, 0.1, 0.05, 1)
+shader_parameter/grime_strength = 0.3
+shader_parameter/grime_up_bias = 0.2
+shader_parameter/wetness = 0.0
+shader_parameter/puddle_scale = 0.1
+shader_parameter/puddle_roughness = 0.1
+shader_parameter/enable_halftone = true
+shader_parameter/halftone_scale = 22.0
+shader_parameter/halftone_strength = 0.35
+shader_parameter/enable_hatching = false
+shader_parameter/hatch_scale = 12.0
+shader_parameter/hatch_strength = 0.0

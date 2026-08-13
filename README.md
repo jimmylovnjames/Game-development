@@ -112,7 +112,7 @@ tools/      headless verification + authoring scripts
 ## Controls
 
 `WASD` move · `Shift` sprint · `Ctrl` crouch · `Space` jump · `E` interact ·
-`F` flashlight · `RMB` aim · `Esc` release mouse · `F3` toggle debug overlay
+`F` flashlight · `T` toggle daytime / night · `RMB` aim · `Esc` release mouse · `F3` toggle debug overlay
 
 ## Licence
 

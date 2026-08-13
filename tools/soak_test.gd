@@ -13,6 +13,7 @@ const SETTLE_FRAMES := 150
 const WALK_FRAMES := 90
 const JUMP_HOLD_FRAMES := 4
 const JUMP_FRAMES := 20
+const DAY_TOGGLE_FRAMES := 25
 
 var _scene: Node = null
 var _player: CharacterBody3D = null
@@ -62,6 +63,9 @@ func _physics_process(_delta: float) -> bool:
 				Input.action_release("jump")
 			if _frame >= SETTLE_FRAMES + WALK_FRAMES + JUMP_FRAMES:
 				_finish_jump()
+		3:
+			if _frame >= SETTLE_FRAMES + WALK_FRAMES + JUMP_FRAMES + DAY_TOGGLE_FRAMES:
+				_finish_daytime_check()
 				_report()
 				return true
 	return false
@@ -125,6 +129,24 @@ func _finish_jump() -> void:
 		_fail("'jump' did not lift the player (rise=%.3f m)" % rise)
 	else:
 		_ok("responds to 'jump' (rise=%.2f m)" % rise)
+	
+	# Transition to day/night toggle test
+	var cycle := _scene.get_node_or_null("DayNightCycle") as DayNightCycle
+	if cycle != null:
+		cycle.toggle_day_night()
+	_stage = 3
+
+
+func _finish_daytime_check() -> void:
+	print("[stage 4: daytime cycle]")
+	var cycle := _scene.get_node_or_null("DayNightCycle") as DayNightCycle
+	if cycle == null:
+		_fail("DayNightCycle node missing from main scene")
+		return
+	if cycle.is_daytime():
+		_ok("successfully transitioned to daytime (time=%.2f: %s)" % [cycle.time_of_day, cycle.get_time_string()])
+	else:
+		_fail("toggle_day_night() failed to switch to daytime")
 
 
 func _is_finite(v: Vector3) -> bool:

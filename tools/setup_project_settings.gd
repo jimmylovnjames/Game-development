@@ -41,6 +41,7 @@ const KEY_BINDINGS := {
 	"map": [KEY_M],
 	"pause": [KEY_ESCAPE],
 	"toggle_flashlight": [KEY_F],
+	"time_toggle": [KEY_T],
 	"debug_toggle": [KEY_F3],
 }
 

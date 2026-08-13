@@ -45,6 +45,7 @@ func _check_input_map() -> void:
 		"jump": KEY_SPACE,
 		"sprint": KEY_SHIFT,
 		"interact": KEY_E,
+		"time_toggle": KEY_T,
 	}
 	for action: String in expected:
 		if not InputMap.has_action(action):
@@ -120,7 +121,8 @@ func _check_main_scene() -> void:
 		_ok("root script attached: %s" % instance.get_script().resource_path)
 
 	for node_path: String in [
-		"WorldEnvironment", "Moonlight", "World/Ground", "World/Blockout",
+		"WorldEnvironment", "Moonlight", "Sunlight", "DayNightCycle",
+		"World/Ground", "World/Blockout",
 		"Player", "Player/CameraPivot/SpringArm3D/Camera3D",
 		"Player/CameraPivot/SpringArm3D/Camera3D/InteractRay",
 		"DebugHUD/DebugLabel",

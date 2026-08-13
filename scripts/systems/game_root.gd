@@ -3,7 +3,7 @@ extends Node3D
 ## Entry point for the playable scene.
 ##
 ## Owns nothing gameplay-critical on purpose: it wires the player to the debug
-## overlay, handles quit, and prints a one-shot boot report that headless CI can
+## overlay, day/night cycle, handles quit, and prints a one-shot boot report that headless CI can
 ## assert against.
 
 @export var print_boot_report: bool = true
@@ -11,6 +11,7 @@ extends Node3D
 @onready var _player: PlayerController = $Player
 @onready var _blockout: DistrictBlockout = $World/Blockout
 @onready var _debug_label: Label = $DebugHUD/DebugLabel
+@onready var _cycle: DayNightCycle = get_node_or_null("DayNightCycle")
 
 var _debug_visible: bool = true
 
@@ -51,15 +52,20 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("debug_toggle"):
 		_debug_visible = not _debug_visible
 		_debug_label.visible = _debug_visible
+	elif event.is_action_pressed("time_toggle"):
+		if _cycle:
+			_cycle.toggle_day_night()
 
 
 func _process(_delta: float) -> void:
 	if not _debug_visible or not _debug_label.visible:
 		return
 	var interactable := _player.get_current_interactable()
+	var time_str := _cycle.get_time_string() if _cycle != null else "Night"
 	_debug_label.text = "\n".join([
-		"NeonWastesRPG — blockout",
+		"NeonWastesRPG — Ferrum Halo District",
 		"fps      %d" % Engine.get_frames_per_second(),
+		"time     %s" % time_str,
 		"pos      %.1f, %.1f, %.1f" % [
 			_player.global_position.x,
 			_player.global_position.y,
@@ -70,7 +76,7 @@ func _process(_delta: float) -> void:
 		"target   %s" % ("—" if interactable == null else interactable.name),
 		"",
 		"WASD move · Shift sprint · Ctrl crouch · Space jump",
-		"E interact · F flashlight · Esc release mouse · F3 hide",
+		"E interact · F flashlight · T toggle daytime · Esc mouse · F3 hide",
 	])
 
 
