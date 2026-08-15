@@ -18,6 +18,7 @@ func _initialize() -> void:
 	_check_quests()
 	_check_biomes()
 	_check_chunk_generation()
+	_check_authored_chunk_contract()
 
 	print("")
 	if _failures == 0:
@@ -270,6 +271,74 @@ func _check_chunk_generation() -> void:
 	built.append_array(plaza_chunks)
 	for chunk: WorldChunk in built:
 		chunk.free()
+
+
+func _check_authored_chunk_contract() -> void:
+	print("[authored chunks]")
+	# A scene in worlds/chunks/ overrides generation for one coordinate. Two
+	# things have to survive being saved and reloaded or the override is worse
+	# than useless — it replaces a working chunk with a broken one. The root has
+	# to still be a WorldChunk (instantiate() returns a scriptless node when the
+	# class cache is stale, and the streamer can only fall back if it can tell),
+	# and the chunk_detail group has to still be on the lights, or an authored
+	# chunk lights itself from across the map.
+	var biomes := ChunkStreamer.load_biomes("res://worlds/biomes")
+	if biomes.is_empty():
+		return  # already reported by _check_biomes
+
+	var generator := ChunkGenerator.new()
+	generator.configure(20771113, biomes)
+	var source := generator.generate(Vector2i(5, 5))
+	_claim_ownership(source, source)
+
+	var packed := PackedScene.new()
+	if packed.pack(source) != OK:
+		_fail("a generated chunk could not be packed into a PackedScene")
+		source.free()
+		return
+
+	var path := "user://verify_authored_chunk.tscn"
+	if ResourceSaver.save(packed, path) != OK:
+		_fail("a packed chunk could not be saved to %s" % path)
+		source.free()
+		return
+
+	var reloaded := (load(path) as PackedScene).instantiate()
+	var chunk := reloaded as WorldChunk
+	if chunk == null:
+		_fail("a saved chunk does not reload as a WorldChunk (stale class cache?)")
+	else:
+		_ok("a chunk scene round-trips through worlds/chunks/ as a WorldChunk")
+		var want := _count_in_group(source, WorldChunk.DETAIL_GROUP)
+		var got := _count_in_group(chunk, WorldChunk.DETAIL_GROUP)
+		if want == 0:
+			_fail("the sample chunk has no '%s' members to check" % WorldChunk.DETAIL_GROUP)
+		elif want == got:
+			_ok("%d '%s' member(s) survived the save" % [got, WorldChunk.DETAIL_GROUP])
+		else:
+			_fail("'%s' membership did not survive the save (%d of %d)" % [
+				WorldChunk.DETAIL_GROUP, got, want,
+			])
+
+	reloaded.free()
+	source.free()
+	DirAccess.remove_absolute(path)
+
+
+## PackedScene.pack() only keeps descendants owned by the root.
+func _claim_ownership(node: Node, root: Node) -> void:
+	for child in node.get_children():
+		child.owner = root
+		_claim_ownership(child, root)
+
+
+func _count_in_group(node: Node, group: StringName) -> int:
+	var total := 0
+	for child in node.get_children():
+		if child.is_in_group(group):
+			total += 1
+		total += _count_in_group(child, group)
+	return total
 
 
 func _list_files(dir_path: String, suffix: String) -> Array[String]:

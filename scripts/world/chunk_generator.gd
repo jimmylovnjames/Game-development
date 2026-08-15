@@ -231,7 +231,10 @@ func _spawn_sign(
 	light.omni_range = biome.sign_light_range
 	light.shadow_enabled = false  # dozens of these; shadows are not worth the cost
 	light.position = normal * -1.5
-	light.add_to_group(WorldChunk.DETAIL_GROUP)
+	# Persistent, so the grouping survives being packed into an authored
+	# override under worlds/chunks/. add_to_group() defaults to non-
+	# persistent, which PackedScene silently drops on save.
+	light.add_to_group(WorldChunk.DETAIL_GROUP, true)
 	holder.add_child(light)
 
 	chunk.sign_count += 1
@@ -374,5 +377,8 @@ func _spawn_lamp(
 	light.spot_angle = 62.0
 	light.spot_angle_attenuation = 1.4
 	light.shadow_enabled = false
-	light.add_to_group(WorldChunk.DETAIL_GROUP)
+	# Persistent, so the grouping survives being packed into an authored
+	# override under worlds/chunks/. add_to_group() defaults to non-
+	# persistent, which PackedScene silently drops on save.
+	light.add_to_group(WorldChunk.DETAIL_GROUP, true)
 	post.add_child(light)
