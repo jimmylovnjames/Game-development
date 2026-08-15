@@ -48,10 +48,11 @@ else
 	fail "package unique_name missing"
 fi
 
-if grep -q 'gradle_build/use_gradle_build=false' "$ROOT/tools/android_export_presets.cfg"; then
+if grep -q 'gradle_build/use_gradle_build=false' "$ROOT/tools/android_export_presets.cfg" \
+	&& grep -q 'gradle_build/min_sdk=""' "$ROOT/tools/android_export_presets.cfg"; then
 	ok "uses prebuilt Android export templates (no Gradle project in-tree)"
 else
-	fail "expected gradle_build/use_gradle_build=false"
+	fail "expected gradle_build/use_gradle_build=false and empty min_sdk override"
 fi
 
 if grep -q 'architectures/arm64-v8a=true' "$ROOT/tools/android_export_presets.cfg"; then
