@@ -5,11 +5,11 @@ Store build.
 
 ## Fastest path
 
-1. Wait for `.github/workflows/android-playtest.yml` on this branch (Actions
-   tab) and download **NeonWastesRPG-android**.
-2. Copy `NeonWastesRPG.apk` to the phone.
-3. On the phone: Settings → security → allow install from this source, then
-   open the APK.
+Download **[NeonWastesRPG.apk](https://github.com/jimmylovnjames/Game-development/raw/cursor/android-playable-9eac/dist/android/NeonWastesRPG.apk)**
+(or open that file on the branch and use GitHub’s **Download raw file**).
+
+Copy it to the phone, then Settings → security → allow install from this
+source, and open the APK.
 
 Package id: `rpg.neonwastes.playtest`. Uninstall that package before installing
 a build signed with a different key.
