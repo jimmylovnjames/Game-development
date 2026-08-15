@@ -95,6 +95,18 @@ func _finish_settle() -> void:
 	else:
 		_fail("is_on_floor() is false after %d frames" % SETTLE_FRAMES)
 
+	var touch := _scene.get_node_or_null("TouchControls")
+	if touch == null:
+		_fail("TouchControls node missing from main scene")
+	elif touch.get_script() == null:
+		_fail("TouchControls has no script attached")
+	else:
+		_ok("TouchControls present")
+		if DisplayServer.get_name() == "headless" and touch.visible:
+			_fail("TouchControls should stay hidden in headless soak")
+		else:
+			_ok("TouchControls hidden under headless")
+
 	_walk_start = _player.global_position
 	_stage = 1
 

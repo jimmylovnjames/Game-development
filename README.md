@@ -24,6 +24,18 @@ project, and installs `~/Applications/NeonWastesRPG.app`.
 Details, uninstall, and the CI-exported `.app` zip:
 [`dist/macos/README.md`](dist/macos/README.md).
 
+## Play on Android
+
+Sideload the debug APK from the **Android playtest** GitHub Action
+(`NeonWastesRPG-android` artifact). On-screen stick + look pad + JUMP / USE
+buttons; Bluetooth pads work too.
+
+```bash
+GODOT=godot bash tools/export_android.sh    # writes build/android/NeonWastesRPG.apk
+```
+
+Details: [`dist/android/README.md`](dist/android/README.md).
+
 ## Quick start
 
 ```bash
@@ -47,6 +59,7 @@ godot --headless --path . --script tools/verify_setup.gd  # input map, shaders, 
 godot --headless --path . --script tools/soak_test.gd     # physics settle, walk, jump
 python3 tools/verify_mcp.py                               # MCP servers in .mcp.json
 bash tools/check_macos_installer.sh                       # playtest installer + export preset
+bash tools/check_android_export.sh                        # Android APK preset + touch HUD
 ```
 
 `verify_setup.gd` picks up new shaders and quest resources automatically. New
@@ -111,8 +124,12 @@ tools/      headless verification + authoring scripts
 
 ## Controls
 
-`WASD` move · `Shift` sprint · `Ctrl` crouch · `Space` jump · `E` interact ·
-`F` flashlight · `RMB` aim · `Esc` release mouse · `F3` toggle debug overlay
+Desktop: `WASD` move · `Shift` sprint · `Ctrl` crouch · `Space` jump · `E`
+interact · `F` flashlight · `RMB` aim · `Esc` release mouse · `F3` toggle
+debug overlay.
+
+Android: left stick move · drag the right half of the screen to look · on-screen
+**JUMP / SPRINT / USE / LIGHT / DUCK**. Xbox-layout Bluetooth pads also work.
 
 ## Licence
 

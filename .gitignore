@@ -6,6 +6,7 @@
 # Exported builds
 /build/
 /export/
+/android/
 *.translation
 
 # export_presets.cfg can hold signing keystore paths and passwords.

@@ -1,9 +1,10 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/systems/game_root.gd" id="1_root"]
 [ext_resource type="Script" path="res://scripts/world/district_blockout.gd" id="2_blockout"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3_player"]
 [ext_resource type="Material" path="res://assets/materials/toon_asphalt.tres" id="4_asphalt"]
+[ext_resource type="PackedScene" path="res://scenes/ui/touch_controls.tscn" id="5_touch"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_noir"]
 sky_top_color = Color(0.043, 0.031, 0.094, 1)
@@ -106,6 +107,8 @@ script = ExtResource("2_blockout")
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+
+[node name="TouchControls" parent="." instance=ExtResource("5_touch")]
 
 [node name="DebugHUD" type="CanvasLayer" parent="."]
 

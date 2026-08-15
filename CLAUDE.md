@@ -51,6 +51,8 @@ godot --headless --path . --script tools/soak_test.gd      # physics + synthetic
 python3 tools/verify_mcp.py                        # handshake every server in .mcp.json
 bash tools/check_macos_installer.sh                # playtest installer + macOS export preset
 GODOT=godot bash tools/export_macos.sh             # writes build/macos/NeonWastesRPG.zip
+GODOT=godot bash tools/export_android.sh           # writes build/android/NeonWastesRPG.apk
+bash tools/check_android_export.sh                 # Android preset + touch HUD
 
 godot --path .                                     # open the editor
 godot --path . --headless --quit-after 300         # run the game headlessly

@@ -59,6 +59,12 @@ func _check_input_map() -> void:
 		else:
 			_fail("action '%s' exists but does not match its key event" % action)
 
+	for action: String in ["look_left", "look_right", "look_up", "look_down"]:
+		if InputMap.has_action(action):
+			_ok("action '%s' is in the input map" % action)
+		else:
+			_fail("action '%s' is missing (needed for gamepad look)" % action)
+
 	for action: String in ["attack_primary", "attack_secondary"]:
 		if not InputMap.has_action(action):
 			_fail("action '%s' is missing from the input map" % action)
@@ -124,6 +130,7 @@ func _check_main_scene() -> void:
 		"Player", "Player/CameraPivot/SpringArm3D/Camera3D",
 		"Player/CameraPivot/SpringArm3D/Camera3D/InteractRay",
 		"DebugHUD/DebugLabel",
+		"TouchControls",
 	]:
 		if instance.has_node(node_path):
 			_ok("node present: %s" % node_path)

@@ -25,6 +25,9 @@ signal landed(fall_speed: float)
 
 @export_group("Camera")
 @export var mouse_sensitivity: float = 0.0025
+@export var touch_look_sensitivity: float = 0.0032
+## Radians per second at full right-stick deflection.
+@export var joy_look_speed: float = 2.6
 @export var min_pitch_deg: float = -70.0
 @export var max_pitch_deg: float = 45.0
 @export var camera_distance: float = 4.5
@@ -56,39 +59,31 @@ func _ready() -> void:
 	_interact_ray.target_position = Vector3(0.0, 0.0, -interact_range)
 	_spring_arm.spring_length = camera_distance
 	_yaw = rotation.y
-	_capture_mouse(true)
+	if _wants_mouse_capture():
+		_capture_mouse(true)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and _is_mouse_captured():
 		var motion := event as InputEventMouseMotion
-		_yaw -= motion.relative.x * mouse_sensitivity
-		_pitch = clampf(
-			_pitch - motion.relative.y * mouse_sensitivity,
-			deg_to_rad(min_pitch_deg),
-			deg_to_rad(max_pitch_deg),
-		)
+		apply_look(motion.relative, mouse_sensitivity)
 
-	if event.is_action_pressed("pause"):
+	if event.is_action_pressed("pause") and _wants_mouse_capture():
 		_capture_mouse(not _is_mouse_captured())
-
-	if event.is_action_pressed("interact") and _current_interactable != null:
-		interacted.emit(_current_interactable)
-		if _current_interactable.has_method("interact"):
-			_current_interactable.interact(self)
-
-	if event.is_action_pressed("toggle_flashlight"):
-		_flashlight.visible = not _flashlight.visible
 
 
 func _physics_process(delta: float) -> void:
-	# Jump is polled rather than read from _unhandled_input so that anything
-	# driving the character through Input.action_press() — automated tests,
-	# replays, scripted cutscenes, AI-controlled bodies — moves it identically
-	# to a human at the keyboard.
+	# Jump / interact / flashlight are polled rather than read from
+	# _unhandled_input so that anything driving the character through
+	# Input.action_press() — automated tests, on-screen Android buttons,
+	# replays, scripted cutscenes — moves it identically to a human at the
+	# keyboard.
 	if Input.is_action_just_pressed("jump"):
 		_time_since_jump_pressed = 0.0
 	_time_since_jump_pressed += delta
+	_poll_interact()
+	_poll_flashlight()
+	_apply_look_stick(delta)
 	_update_camera()
 	_update_crouch()
 	_apply_gravity(delta)
@@ -194,6 +189,53 @@ func _update_interactable() -> void:
 	if found != _current_interactable:
 		_current_interactable = found
 		interactable_changed.emit(found)
+
+
+func apply_look(relative: Vector2, sensitivity: float = -1.0) -> void:
+	var sens := mouse_sensitivity if sensitivity < 0.0 else sensitivity
+	_yaw -= relative.x * sens
+	_pitch = clampf(
+		_pitch - relative.y * sens,
+		deg_to_rad(min_pitch_deg),
+		deg_to_rad(max_pitch_deg),
+	)
+
+
+func _apply_look_stick(delta: float) -> void:
+	if not InputMap.has_action("look_left"):
+		return
+	var look := Input.get_vector("look_left", "look_right", "look_up", "look_down")
+	if look.length_squared() < 0.0025:
+		return
+	_yaw -= look.x * joy_look_speed * delta
+	_pitch = clampf(
+		_pitch - look.y * joy_look_speed * delta,
+		deg_to_rad(min_pitch_deg),
+		deg_to_rad(max_pitch_deg),
+	)
+
+
+func _poll_interact() -> void:
+	if not Input.is_action_just_pressed("interact"):
+		return
+	if _current_interactable == null:
+		return
+	interacted.emit(_current_interactable)
+	if _current_interactable.has_method("interact"):
+		_current_interactable.interact(self)
+
+
+func _poll_flashlight() -> void:
+	if Input.is_action_just_pressed("toggle_flashlight"):
+		_flashlight.visible = not _flashlight.visible
+
+
+func _wants_mouse_capture() -> bool:
+	if DisplayServer.get_name() == "headless":
+		return false
+	if OS.has_feature("mobile"):
+		return false
+	return true
 
 
 func _capture_mouse(captured: bool) -> void:

@@ -11,6 +11,7 @@ extends Node3D
 @onready var _player: PlayerController = $Player
 @onready var _blockout: DistrictBlockout = $World/Blockout
 @onready var _debug_label: Label = $DebugHUD/DebugLabel
+@onready var _touch: TouchControls = $TouchControls
 
 var _debug_visible: bool = true
 
@@ -19,6 +20,8 @@ func _ready() -> void:
 	_player.global_position = _blockout.get_spawn_point()
 	_player.interactable_changed.connect(_on_interactable_changed)
 	_player.landed.connect(_on_landed)
+	_touch.look_delta.connect(_on_touch_look)
+	_apply_mobile_visuals()
 
 	if print_boot_report:
 		# Deferred so the blockout has finished spawning before we count nodes.
@@ -37,6 +40,8 @@ func _print_boot_report() -> void:
 	print("  player at     : %s" % str(_player.global_position))
 	print("  spawned nodes : %d under World" % _count_descendants($World))
 	print("  viewport size : %s" % str(viewport.get_visible_rect().size))
+	print("  feature mobile: %s" % str(OS.has_feature("mobile")))
+	print("  touch HUD     : %s" % str(_touch.visible))
 	print("================================")
 
 
@@ -69,14 +74,41 @@ func _process(_delta: float) -> void:
 		"grounded %s" % str(_player.is_on_floor()),
 		"target   %s" % ("—" if interactable == null else interactable.name),
 		"",
-		"WASD move · Shift sprint · Ctrl crouch · Space jump",
-		"E interact · F flashlight · Esc release mouse · F3 hide",
+		_control_hint(),
 	])
 
 
+func _control_hint() -> String:
+	if _touch.visible:
+		return "stick move · drag look · JUMP / SPRINT / USE / LIGHT / DUCK"
+	return "WASD move · Shift sprint · Ctrl crouch · Space jump\nE interact · F flashlight · Esc release mouse · F3 hide"
+
+
 func _on_interactable_changed(interactable: Node3D) -> void:
+	_touch.set_interactable(interactable)
 	if interactable != null:
 		print("[GameRoot] interactable in range: %s" % interactable.name)
+
+
+func _on_touch_look(relative: Vector2) -> void:
+	_player.apply_look(relative, _player.touch_look_sensitivity)
+
+
+func _apply_mobile_visuals() -> void:
+	# Compatibility / mobile renderers skip volumetric fog and SSAO; leaving
+	# them enabled just burns CPU on a phone for no on-screen result.
+	if not OS.has_feature("mobile"):
+		return
+	var world_env := $WorldEnvironment as WorldEnvironment
+	var env := world_env.environment
+	if env != null:
+		env.volumetric_fog_enabled = false
+		env.ssao_enabled = false
+		env.ssil_enabled = false
+		env.glow_intensity = 0.6
+	var moon := $Moonlight as DirectionalLight3D
+	if moon != null:
+		moon.directional_shadow_max_distance = 70.0
 
 
 func _on_landed(fall_speed: float) -> void:

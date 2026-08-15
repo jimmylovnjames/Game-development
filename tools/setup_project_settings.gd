@@ -49,25 +49,77 @@ const MOUSE_BINDINGS := {
 	"attack_secondary": [MOUSE_BUTTON_RIGHT],
 }
 
+## Bluetooth / Xbox-layout pads on Android and desktop.
+const JOY_BUTTON_BINDINGS := {
+	"jump": [JOY_BUTTON_A],
+	"crouch": [JOY_BUTTON_B],
+	"interact": [JOY_BUTTON_X],
+	"toggle_flashlight": [JOY_BUTTON_Y],
+	"sprint": [JOY_BUTTON_LEFT_SHOULDER],
+	"attack_primary": [JOY_BUTTON_RIGHT_SHOULDER],
+	"pause": [JOY_BUTTON_START],
+}
+
+## Axis + polarity. Polarity is the event's axis_value (+1 or -1).
+const JOY_AXIS_BINDINGS := {
+	"move_left": [[JOY_AXIS_LEFT_X, -1.0]],
+	"move_right": [[JOY_AXIS_LEFT_X, 1.0]],
+	"move_forward": [[JOY_AXIS_LEFT_Y, -1.0]],
+	"move_back": [[JOY_AXIS_LEFT_Y, 1.0]],
+	"look_left": [[JOY_AXIS_RIGHT_X, -1.0]],
+	"look_right": [[JOY_AXIS_RIGHT_X, 1.0]],
+	"look_up": [[JOY_AXIS_RIGHT_Y, -1.0]],
+	"look_down": [[JOY_AXIS_RIGHT_Y, 1.0]],
+	"attack_secondary": [[JOY_AXIS_TRIGGER_LEFT, 1.0]],
+}
+
 
 func _setup_input_map() -> void:
+	var by_action: Dictionary = {}
 	for action_name: String in KEY_BINDINGS:
-		var events: Array[InputEvent] = []
+		var events := _events_of(by_action, action_name)
 		for scancode: int in KEY_BINDINGS[action_name]:
 			var ev := InputEventKey.new()
 			ev.physical_keycode = scancode
 			events.append(ev)
-		_write_action(action_name, events)
+		by_action[action_name] = events
 
 	for action_name: String in MOUSE_BINDINGS:
-		var events: Array[InputEvent] = []
+		var events := _events_of(by_action, action_name)
 		for button: int in MOUSE_BINDINGS[action_name]:
 			var ev := InputEventMouseButton.new()
 			ev.button_index = button
 			events.append(ev)
-		_write_action(action_name, events)
+		by_action[action_name] = events
 
-	print("Configured %d input actions." % (KEY_BINDINGS.size() + MOUSE_BINDINGS.size()))
+	for action_name: String in JOY_BUTTON_BINDINGS:
+		var events := _events_of(by_action, action_name)
+		for button: int in JOY_BUTTON_BINDINGS[action_name]:
+			var ev := InputEventJoypadButton.new()
+			ev.button_index = button
+			events.append(ev)
+		by_action[action_name] = events
+
+	for action_name: String in JOY_AXIS_BINDINGS:
+		var events := _events_of(by_action, action_name)
+		for pair: Array in JOY_AXIS_BINDINGS[action_name]:
+			var ev := InputEventJoypadMotion.new()
+			ev.axis = int(pair[0])
+			ev.axis_value = float(pair[1])
+			events.append(ev)
+		by_action[action_name] = events
+
+	for action_name: String in by_action:
+		_write_action(action_name, by_action[action_name])
+
+	print("Configured %d input actions." % by_action.size())
+
+
+func _events_of(by_action: Dictionary, action_name: String) -> Array[InputEvent]:
+	if by_action.has(action_name):
+		return by_action[action_name]
+	var empty: Array[InputEvent] = []
+	return empty
 
 
 func _write_action(action_name: String, events: Array[InputEvent]) -> void:
@@ -107,8 +159,11 @@ func _setup_rendering() -> void:
 
 	# Cel shading wants crisp edges, so keep MSAA rather than relying on TAA smearing.
 	ProjectSettings.set_setting("rendering/anti_aliasing/quality/msaa_3d", 2)  # 4x
+	# 2x on phones — 4x MSAA is a steep tax on Mali / Adreno at 1080p.
+	ProjectSettings.set_setting("rendering/anti_aliasing/quality/msaa_3d.mobile", 1)
 	ProjectSettings.set_setting("rendering/anti_aliasing/quality/screen_space_aa", 0)  # Disabled
 	ProjectSettings.set_setting("rendering/anti_aliasing/quality/use_taa", false)
+	ProjectSettings.set_setting("rendering/textures/vram_compression/import_etc2_astc", true)
 
 	# Neon signage in fog is the signature of the art direction.
 	ProjectSettings.set_setting("rendering/environment/volumetric_fog/volume_size", 96)
@@ -126,4 +181,8 @@ func _setup_application() -> void:
 		"Dark, violent neo-noir cyberpunk wasteland RPG. Cel-shaded 3D open world."
 	)
 	ProjectSettings.set_setting("debug/settings/stdout/verbose_stdout", false)
+	# Sensor landscape: phones and tablets can flip 180° without going portrait.
+	ProjectSettings.set_setting("display/window/handheld/orientation", 4)
+	ProjectSettings.set_setting("display/window/stretch/mode", "canvas_items")
+	ProjectSettings.set_setting("display/window/stretch/aspect", "expand")
 	print("Configured application settings.")
