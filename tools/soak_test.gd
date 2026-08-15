@@ -20,8 +20,8 @@ const STREAM_FRAMES := 60
 
 ## Far enough out that not one chunk of the spawn ring survives the move, and on
 ## an exact lot corner so the teleport lands in a junction rather than inside a
-## tower. Odd parity, so the junction carries no street lamp either.
-const FAR_LOT := Vector2i(18, -15)
+## tower. Even parity, so the junction carries no street lamp either.
+const FAR_LOT := Vector2i(18, -16)
 
 var _scene: Node = null
 var _player: CharacterBody3D = null

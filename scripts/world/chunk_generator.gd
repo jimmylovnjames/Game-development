@@ -294,10 +294,16 @@ func _spawn_street_lamps(
 	for ix in WorldGrid.LOTS_PER_CHUNK:
 		for iz in WorldGrid.LOTS_PER_CHUNK:
 			var lot := Vector2i(first_lot.x + ix, first_lot.y + iz)
+			# Thin them out — a lamp at every junction is too bright — but keep
+			# the *odd* diagonal, not the even one. The even diagonal puts a lamp
+			# site on the world origin, which the plaza rule below then deletes,
+			# leaving the spawn unlit for 45 m in every direction. Odd parity
+			# rings the plaza at 32 m instead, at identical lamp density.
+			#
 			# posmod, not %: GDScript's modulo keeps the sign of the dividend,
-			# which flips the parity of the whole west and north half-plane.
-			if posmod(lot.x + lot.y, 2) != 0:
-				continue  # thin them out; a lamp at every junction is too bright
+			# which would flip this parity across the west and north half-planes.
+			if posmod(lot.x + lot.y, 2) != 1:
+				continue
 			if rng.randf() > biome.lamp_chance:
 				continue
 
